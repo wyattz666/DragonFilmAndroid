@@ -475,11 +475,7 @@ class MovieRepository {
 
     private fun sanitizeServerName(rawName: String, index: Int): String {
         var s = rawName
-            .replace(Regex("(?i)kkphim"), "KKP")
-            .replace(Regex("(?i)ophim"), "OP")
-            .replace(Regex("(?i)nguonc"), "NC")
-            .replace(Regex("(?i)vsmov"), "VS")
-            .replace(Regex("(?i)phimmoi|dongphim|hayphim"), "")
+            .replace(Regex("(?i)kkphim|ophim|nguonc|vsmov|phimmoi|dongphim|hayphim|kkp|vsm"), "")
             .replace(Regex("^[#_\\-\\s]+"), "")
             .trim()
 

@@ -1,6 +1,7 @@
 package com.dragonfilm.app.ui.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,11 +12,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -33,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,6 +61,7 @@ fun AuthDialog(
     var email by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showGoogleDialog by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
@@ -95,6 +100,67 @@ fun AuthDialog(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
+
+                // Google OAuth Button
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .border(1.dp, Color.White.copy(alpha = 0.2f), CircleShape)
+                        .clickable { showGoogleDialog = true }
+                        .padding(vertical = 11.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = "G",
+                            style = DFTypography.headline.copy(
+                                color = DFColor.Gold,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 16.sp
+                            )
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Tiếp tục với Google",
+                            style = DFTypography.headline.copy(color = Color.White, fontSize = 13.5.sp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Divider OR
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = Color.White.copy(alpha = 0.12f),
+                        thickness = 0.8.dp
+                    )
+                    Text(
+                        text = "HOẶC",
+                        style = DFTypography.small.copy(
+                            color = DFColor.TextMuted,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier.weight(1f),
+                        color = Color.White.copy(alpha = 0.12f),
+                        thickness = 0.8.dp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // Tab Switcher (Đăng nhập / Đăng ký)
                 Row(
@@ -273,5 +339,18 @@ fun AuthDialog(
                 }
             }
         }
+    }
+
+    if (showGoogleDialog) {
+        GoogleOAuthDialog(
+            authManager = authManager,
+            onDismiss = { showGoogleDialog = false },
+            onSuccess = {
+                onDismiss()
+            },
+            onError = { err ->
+                errorMessage = err
+            }
+        )
     }
 }

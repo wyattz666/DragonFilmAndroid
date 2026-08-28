@@ -35,6 +35,7 @@
 | **High-End Media3 Player** | Custom video controller powered by **AndroidX Media3 ExoPlayer**. Supports Native HLS (`.m3u8`), double-tap to seek +/-10s, hold-to-speed-up (2x), speed dropdown (0.5x to 2.0x), aspect ratio switcher (Fit / Zoom Fill), and automatic resume playback. |
 | **Smart Embed Fallback** | Integrated WebView fallback player for embed-only stream sources (Server 3 & Server 4). |
 | **Real-Time Cloud Sync** | Full 2-way cloud merge (`/api/user-data`) compatible with DragonFilm Web & iOS Schema v4. Seamlessly synchronizes watch history, resume bookmarks, watch-later list, liked movies, and favorite actors. |
+| **Flexible Authentication** | Secure user authentication supporting both native DragonFilm accounts and **Sign in with Google (Google OAuth)**. |
 | **Obsidian & Gold Aesthetics** | Cinema-grade dark theme featuring pure OLED deep black (`#07080A`), metallic gold gradients (`#F5C518`), and frosted glassmorphism overlays. |
 | **Live Trends & Rankings** | Real-time trending rankings curated from **Netflix Vietnam Top 10**, **TMDB Drama Weekly (KR & CN)**, and **AniList GraphQL Trending Anime (Weekly & Seasonal)**. |
 | **14-Day Release Calendar** | Interactive release schedule tracker for ongoing TV series and seasonal anime. |

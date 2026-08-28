@@ -448,7 +448,8 @@ class MovieRepository {
             if (epArray != null) {
                 for (i in 0 until epArray.length()) {
                     val epObj = epArray.optJSONObject(i) ?: continue
-                    val srvName = epObj.optString("server_name", "VIP Server $i")
+                    val rawName = epObj.optString("server_name", "Server ${i + 1}")
+                    val srvName = sanitizeServerName(rawName, i)
                     val itemsArr = epObj.optJSONArray("server_data") ?: epObj.optJSONArray("items")
                     val eps: List<Episode> = if (itemsArr != null) {
                         gson.fromJson(itemsArr.toString(), object : TypeToken<List<Episode>>() {}.type) ?: emptyList()
@@ -470,5 +471,17 @@ class MovieRepository {
         } catch (_: Exception) {
             return null
         }
+    }
+
+    private fun sanitizeServerName(rawName: String, index: Int): String {
+        var s = rawName
+            .replace(Regex("(?i)kkphim|ophim|nguonc|vsmov|phimmoi|dongphim|hayphim|kkp|vsm"), "")
+            .replace(Regex("^[#_\\-\\s]+"), "")
+            .trim()
+
+        if (s.isEmpty()) {
+            return "Server ${index + 1}"
+        }
+        return s
     }
 }

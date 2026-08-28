@@ -2,11 +2,11 @@ package com.dragonfilm.app.util
 
 import java.net.URLEncoder
 
-enum class SourceServer(val rawValue: String, val displayName: String) {
-    KKPHIM("kkphim", "Server 1 · KKP"),
-    OPHIM("ophim", "Server 2 · OP"),
-    NGUONC("nguonc", "Server 3 · NC"),
-    VSMOV("vsmov", "Server 4 · VS");
+enum class SourceServer(val rawValue: String, val displayName: String, val shortName: String) {
+    KKPHIM("kkphim", "Server 1", "SV 1"),
+    OPHIM("ophim", "Server 2", "SV 2"),
+    NGUONC("nguonc", "Server 3", "SV 3"),
+    VSMOV("vsmov", "Server 4", "SV 4");
 
     companion object {
         fun from(value: String?): SourceServer {

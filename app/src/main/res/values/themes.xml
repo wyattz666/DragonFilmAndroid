@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.DragonFilm" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#07080A</item>
+        <item name="android:navigationBarColor">#07080A</item>
+        <item name="android:windowBackground">#07080A</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

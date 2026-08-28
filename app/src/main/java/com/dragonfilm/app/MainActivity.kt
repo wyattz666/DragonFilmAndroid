@@ -29,7 +29,8 @@ class MainActivity : ComponentActivity() {
                         repository = app.movieRepository,
                         localStore = app.localStore,
                         authManager = app.authManager,
-                        cloudSync = app.cloudSync
+                        cloudSync = app.cloudSync,
+                        analyticsManager = app.analyticsManager
                     )
                 }
             }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -13,6 +14,7 @@ import androidx.compose.ui.Modifier
 import com.dragonfilm.app.data.model.Episode
 import com.dragonfilm.app.data.model.Movie
 import com.dragonfilm.app.data.repository.MovieRepository
+import com.dragonfilm.app.data.storage.AnalyticsManager
 import com.dragonfilm.app.data.storage.AuthManager
 import com.dragonfilm.app.data.storage.CloudSync
 import com.dragonfilm.app.data.storage.LocalStore
@@ -42,7 +44,8 @@ fun AppNavigation(
     repository: MovieRepository,
     localStore: LocalStore,
     authManager: AuthManager,
-    cloudSync: CloudSync
+    cloudSync: CloudSync,
+    analyticsManager: AnalyticsManager? = null
 ) {
     var destinationStack by remember {
         mutableStateOf<List<AppDestination>>(listOf(AppDestination.Main(NavScreen.HOME)))
@@ -64,6 +67,26 @@ fun AppNavigation(
 
     fun switchTab(tab: NavScreen) {
         destinationStack = listOf(AppDestination.Main(tab))
+    }
+
+    // Auto telemetry logging on destination change
+    LaunchedEffect(currentDestination) {
+        when (val dest = currentDestination) {
+            is AppDestination.Main -> {
+                analyticsManager?.trackScreen(dest.tab.route, "Tab: ${dest.tab.title}")
+            }
+            is AppDestination.Detail -> {
+                analyticsManager?.trackMovieView(dest.slug, "Phim: ${dest.slug}")
+            }
+            is AppDestination.Player -> {
+                analyticsManager?.trackWatchEpisode(
+                    dest.movie.slug,
+                    dest.movie.name,
+                    dest.episode.name,
+                    dest.server.displayName
+                )
+            }
+        }
     }
 
     when (val dest = currentDestination) {

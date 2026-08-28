@@ -98,6 +98,12 @@ interface DragonFilmApiService {
         @Body body: Map<String, Any>
     ): ResponseBody
 
+    @POST("/api/analytics/track")
+    suspend fun trackVisitor(
+        @Header("Authorization") token: String? = null,
+        @Body body: Map<String, String>
+    ): ResponseBody
+
     @POST("https://graphql.anilist.co")
     suspend fun getAniList(
         @Body body: RequestBody

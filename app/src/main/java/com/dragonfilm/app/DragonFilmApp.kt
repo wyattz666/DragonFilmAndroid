@@ -6,6 +6,7 @@ import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.dragonfilm.app.data.repository.MovieRepository
+import com.dragonfilm.app.data.storage.AnalyticsManager
 import com.dragonfilm.app.data.storage.AuthManager
 import com.dragonfilm.app.data.storage.CloudSync
 import com.dragonfilm.app.data.storage.LocalStore
@@ -27,12 +28,19 @@ class DragonFilmApp : Application(), ImageLoaderFactory {
     lateinit var cloudSync: CloudSync
         private set
 
+    lateinit var analyticsManager: AnalyticsManager
+        private set
+
     override fun onCreate() {
         super.onCreate()
         localStore = LocalStore(this)
         authManager = AuthManager(this)
         movieRepository = MovieRepository()
         cloudSync = CloudSync(localStore, authManager)
+        analyticsManager = AnalyticsManager(this, authManager)
+
+        // Track App Open to D1
+        analyticsManager.trackAppOpen()
 
         // Initial background cloud sync
         CoroutineScope(Dispatchers.IO).launch {

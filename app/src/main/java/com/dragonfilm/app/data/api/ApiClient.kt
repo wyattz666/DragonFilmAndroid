@@ -1,5 +1,6 @@
 package com.dragonfilm.app.data.api
 
+import com.dragonfilm.app.util.DeviceInfo
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
@@ -12,7 +13,6 @@ object ApiClient {
     const val BASE_URL = "https://dragonfilm.pages.dev"
 
     val gson: Gson = GsonBuilder()
-        .setLenient()
         .create()
 
     private val okHttpClient: OkHttpClient by lazy {
@@ -26,7 +26,12 @@ object ApiClient {
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .addHeader("Accept", "application/json")
-                    .addHeader("User-Agent", "DragonFilm-Android/1.0.0")
+                    .addHeader("User-Agent", DeviceInfo.userAgent)
+                    .addHeader("X-Device-Model", DeviceInfo.deviceName)
+                    .addHeader("X-Device-OS", "Android ${DeviceInfo.osVersion} (API ${DeviceInfo.sdkInt})")
+                    .addHeader("X-Device-Brand", DeviceInfo.brand)
+                    .addHeader("X-App-Version", DeviceInfo.appVersion)
+                    .addHeader("X-Platform", "android")
                     .build()
                 chain.proceed(request)
             }

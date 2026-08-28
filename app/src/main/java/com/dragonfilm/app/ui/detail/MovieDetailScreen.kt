@@ -137,10 +137,51 @@ fun MovieDetailScreen(
                 CircularProgressIndicator(color = DFColor.Gold)
             }
         } else if (movie == null) {
-            EmptyStateView(
-                title = "Không tìm thấy phim",
-                message = "Phim này hiện không khả dụng hoặc đã bị gỡ."
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                EmptyStateView(
+                    title = "Không tìm thấy phim",
+                    message = "Phim này hiện chưa có nguồn phát hoặc đang cập nhật."
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(DFColor.Bg3)
+                            .clickable { onBack() }
+                            .padding(horizontal = 20.dp, vertical = 10.dp)
+                    ) {
+                        Text(text = "Quay lại", style = DFTypography.headline.copy(color = DFColor.TextMuted, fontSize = 13.sp))
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(DFColor.GoldGradient)
+                            .clickable {
+                                scope.launch {
+                                    isLoading = true
+                                    val res = repository.getMovieDetail(slug)
+                                    if (res != null) {
+                                        detailResult = res
+                                        selectedServer = res.availableServers.firstOrNull() ?: SourceServer.KKPHIM
+                                        currentEpisodeServers = res.episodeServers
+                                        fullDescription = res.description
+                                    }
+                                    isLoading = false
+                                }
+                            }
+                            .padding(horizontal = 24.dp, vertical = 10.dp)
+                    ) {
+                        Text(text = "Thử lại", style = DFTypography.headline.copy(color = Color(0xFF07080A), fontSize = 13.sp))
+                    }
+                }
+            }
         } else {
             val isLiked = likedMovies.any { it.slug == movie.slug }
             val isWatchLater = watchLaterMovies.any { it.slug == movie.slug }

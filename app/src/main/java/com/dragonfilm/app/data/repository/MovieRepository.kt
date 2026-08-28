@@ -18,6 +18,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Calendar
 import java.util.concurrent.ConcurrentHashMap
@@ -89,7 +90,7 @@ class MovieRepository {
             val path = SourceNormalizer.upstreamPath(server, operation, slug, null, page)
             val resp = api.getSourceRaw(server.rawValue, path)
             val jsonStr = resp.string()
-            val result = parseCatalog(jsonStr, page)
+            val result = parseCatalog(jsonStr, page, server)
             catalogCache[cacheKey] = Pair(now, result)
             result
         } catch (_: Exception) {
@@ -101,20 +102,25 @@ class MovieRepository {
         slug: String,
         preferredServer: SourceServer = SourceServer.KKPHIM
     ): MovieDetailResult? = withContext(Dispatchers.IO) {
+        val trimmedSlug = slug.trim()
+        if (trimmedSlug.isEmpty()) return@withContext null
+
         val now = System.currentTimeMillis()
-        val cached = detailCache[slug]
+        val cached = detailCache[trimmedSlug]
         if (cached != null && (now - cached.first) < 5 * 60 * 1000) {
             return@withContext cached.second
         }
 
+        // 1. Direct Lookup across available servers
+        val activeServers = listOf(SourceServer.KKPHIM, SourceServer.VSMOV, SourceServer.NGUONC)
         val checkedServers = coroutineScope {
-            SourceServer.entries.map { server ->
+            activeServers.map { server ->
                 async {
                     try {
-                        val path = SourceNormalizer.upstreamPath(server, "detail", slug)
+                        val path = SourceNormalizer.upstreamPath(server, "detail", trimmedSlug)
                         val resp = api.getSourceRaw(server.rawValue, path)
                         val jsonStr = resp.string()
-                        val res = parseMovieDetailResponse(jsonStr)
+                        val res = parseMovieDetailResponse(jsonStr, server)
                         if (res != null) Pair(server, res) else null
                     } catch (_: Exception) {
                         null
@@ -123,24 +129,40 @@ class MovieRepository {
             }.mapNotNull { it.await() }
         }
 
-        if (checkedServers.isEmpty()) return@withContext null
+        if (checkedServers.isNotEmpty()) {
+            val available = checkedServers.map { it.first }
+            val primaryPair = checkedServers.firstOrNull { it.first == preferredServer }
+                ?: checkedServers.first()
 
-        val available = checkedServers.map { it.first }
-        val primaryPair = checkedServers.firstOrNull { it.first == preferredServer }
-            ?: checkedServers.first()
+            val primaryResult = primaryPair.second
+            val allEpisodeServers = checkedServers.flatMap { it.second.episodeServers }
 
-        val primaryResult = primaryPair.second
-        val allEpisodeServers = checkedServers.flatMap { it.second.episodeServers }
+            val finalResult = MovieDetailResult(
+                movie = primaryResult.movie,
+                availableServers = available,
+                episodeServers = if (allEpisodeServers.isNotEmpty()) allEpisodeServers else primaryResult.episodeServers,
+                description = primaryResult.description
+            )
 
-        val finalResult = MovieDetailResult(
-            movie = primaryResult.movie,
-            availableServers = available,
-            episodeServers = if (allEpisodeServers.isNotEmpty()) allEpisodeServers else primaryResult.episodeServers,
-            description = primaryResult.description
-        )
+            detailCache[trimmedSlug] = Pair(now, finalResult)
+            return@withContext finalResult
+        }
 
-        detailCache[slug] = Pair(now, finalResult)
-        finalResult
+        // 2. Search Fallback: If not found directly, search by keyword/title
+        val searchQuery = trimmedSlug.replace("-", " ")
+        val searchResults = searchMovies(searchQuery)
+        if (searchResults.isNotEmpty()) {
+            val matchedSlug = searchResults.first().slug
+            if (matchedSlug.isNotEmpty() && matchedSlug != trimmedSlug) {
+                val matchedDetail = getMovieDetail(matchedSlug, preferredServer)
+                if (matchedDetail != null) {
+                    detailCache[trimmedSlug] = Pair(now, matchedDetail)
+                    return@withContext matchedDetail
+                }
+            }
+        }
+
+        null
     }
 
     suspend fun getEpisodesForServer(
@@ -151,7 +173,7 @@ class MovieRepository {
             val path = SourceNormalizer.upstreamPath(server, "detail", slug)
             val resp = api.getSourceRaw(server.rawValue, path)
             val jsonStr = resp.string()
-            val res = parseMovieDetailResponse(jsonStr)
+            val res = parseMovieDetailResponse(jsonStr, server)
             if (res != null) {
                 Pair(res.episodeServers, res.description)
             } else {
@@ -166,14 +188,15 @@ class MovieRepository {
         val q = query.trim()
         if (q.isEmpty()) return@withContext emptyList()
 
+        val searchServers = listOf(SourceServer.KKPHIM, SourceServer.VSMOV, SourceServer.NGUONC)
         coroutineScope {
-            val tasks = listOf(SourceServer.KKPHIM, SourceServer.OPHIM, SourceServer.NGUONC).map { server ->
+            val tasks = searchServers.map { server ->
                 async {
                     try {
                         val path = SourceNormalizer.upstreamPath(server, "search", null, q, 1)
                         val resp = api.getSourceRaw(server.rawValue, path)
                         val jsonStr = resp.string()
-                        parseCatalog(jsonStr, 1).movies
+                        parseCatalog(jsonStr, 1, server).movies
                     } catch (_: Exception) {
                         emptyList()
                     }
@@ -223,7 +246,9 @@ class MovieRepository {
         }
     }
 
-    suspend fun getAniListWeeklyTrending(perPage: Int = 10): List<AniListNormalized> = withContext(Dispatchers.IO) {
+    suspend fun getAniListWeeklyTrending(perPage: Int = 10): List<AniListNormalized> = getAniListTrendingWeekly(perPage)
+
+    suspend fun getAniListTrendingWeekly(perPage: Int = 10): List<AniListNormalized> = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         if (cachedAniListWeekly != null && (now - cachedAniListWeekly!!.first) < 30 * 60 * 1000) {
             return@withContext cachedAniListWeekly!!.second
@@ -409,7 +434,8 @@ class MovieRepository {
 
     // MARK: - Private Parsers
 
-    private fun parseCatalog(jsonStr: String, defaultPage: Int): CatalogResult {
+    private fun parseCatalog(jsonStr: String, defaultPage: Int, server: SourceServer): CatalogResult {
+        if (!jsonStr.startsWith("{")) return CatalogResult(emptyList(), 1, defaultPage)
         val root = JSONObject(jsonStr)
         val dataObj = root.optJSONObject("data")
         val itemsArray = dataObj?.optJSONArray("items")
@@ -417,45 +443,100 @@ class MovieRepository {
             ?: root.optJSONArray("movies")
             ?: dataObj?.optJSONArray("movies")
 
-        val movies: List<Movie> = if (itemsArray != null) {
+        val rawMovies: List<Movie> = if (itemsArray != null) {
             gson.fromJson(itemsArray.toString(), object : TypeToken<List<Movie>>() {}.type) ?: emptyList()
         } else {
             emptyList()
         }
 
+        // Normalize image paths if needed
+        val normalized = rawMovies.map { m ->
+            var poster = m.posterUrl
+            var thumb = m.thumbUrl
+            if (poster.isNotEmpty() && !poster.startsWith("http")) {
+                poster = resolveImageUrl(poster, server)
+            }
+            if (thumb.isNotEmpty() && !thumb.startsWith("http")) {
+                thumb = resolveImageUrl(thumb, server)
+            }
+            m.copy(posterUrl = poster, thumbUrl = thumb, server = server.rawValue)
+        }
+
         val pagination = dataObj?.optJSONObject("params")?.optJSONObject("pagination")
+            ?: root.optJSONObject("paginate")
         val totalPages = pagination?.optInt("totalPages", 1)
+            ?: pagination?.optInt("total_page", 1)
             ?: root.optInt("totalPages", 1)
 
-        return CatalogResult(movies, totalPages, defaultPage)
+        return CatalogResult(normalized, totalPages, defaultPage)
     }
 
-    private fun parseMovieDetailResponse(jsonStr: String): MovieDetailResult? {
+    private fun parseMovieDetailResponse(jsonStr: String, server: SourceServer): MovieDetailResult? {
+        if (!jsonStr.startsWith("{")) return null
         try {
             val root = JSONObject(jsonStr)
             val movieObj = root.optJSONObject("movie")
                 ?: root.optJSONObject("data")?.optJSONObject("item")
                 ?: root.optJSONObject("data")?.optJSONObject("movie")
+                ?: root.optJSONObject("item")
                 ?: return null
 
-            val movie: Movie = gson.fromJson(movieObj.toString(), Movie::class.java) ?: return null
+            val rawMovie: Movie = gson.fromJson(movieObj.toString(), Movie::class.java) ?: return null
             val desc = movieObj.optString("content", "")
+                .ifEmpty { movieObj.optString("description", "") }
+
+            var poster = rawMovie.posterUrl
+            var thumb = rawMovie.thumbUrl
+            if (poster.isNotEmpty() && !poster.startsWith("http")) {
+                poster = resolveImageUrl(poster, server)
+            }
+            if (thumb.isNotEmpty() && !thumb.startsWith("http")) {
+                thumb = resolveImageUrl(thumb, server)
+            }
+            val movie = rawMovie.copy(posterUrl = poster, thumbUrl = thumb, server = server.rawValue)
 
             val epServers = mutableListOf<EpisodeServer>()
             val epArray = root.optJSONArray("episodes")
                 ?: root.optJSONObject("data")?.optJSONArray("episodes")
+                ?: root.optJSONObject("data")?.optJSONObject("item")?.optJSONArray("episodes")
+                ?: movieObj.optJSONArray("episodes")
 
             if (epArray != null) {
                 for (i in 0 until epArray.length()) {
                     val epObj = epArray.optJSONObject(i) ?: continue
                     val rawName = epObj.optString("server_name", "Server ${i + 1}")
                     val srvName = sanitizeServerName(rawName, i)
-                    val itemsArr = epObj.optJSONArray("server_data") ?: epObj.optJSONArray("items")
-                    val eps: List<Episode> = if (itemsArr != null) {
-                        gson.fromJson(itemsArr.toString(), object : TypeToken<List<Episode>>() {}.type) ?: emptyList()
-                    } else {
-                        emptyList()
+                    val itemsArr = epObj.optJSONArray("server_data")
+                        ?: epObj.optJSONArray("items")
+
+                    val eps = mutableListOf<Episode>()
+                    if (itemsArr != null) {
+                        for (j in 0 until itemsArr.length()) {
+                            val itemObj = itemsArr.optJSONObject(j) ?: continue
+                            val name = itemObj.optString("name", "Tập ${j + 1}")
+                            val epSlug = itemObj.optString("slug", "tap-${j + 1}")
+                            val filename = itemObj.optString("filename", "").takeIf { it.isNotEmpty() }
+                            val rawM3u8 = itemObj.optString("link_m3u8", "").ifEmpty { itemObj.optString("m3u8", "") }
+                            val rawEmbed = itemObj.optString("link_embed", "").ifEmpty { itemObj.optString("embed", "") }
+
+                            var m3u8 = rawM3u8.takeIf { it.isNotEmpty() }
+                            if (m3u8 == null && rawEmbed.contains("streamvsmov.com/video/")) {
+                                m3u8 = rawEmbed.replace("/video/", "/stream/") + "/master.m3u8"
+                            }
+
+                            eps.add(
+                                Episode(
+                                    id = epSlug.ifEmpty { "ep-$j" },
+                                    name = name,
+                                    slug = epSlug,
+                                    filename = filename,
+                                    linkM3U8 = m3u8,
+                                    linkEmbed = rawEmbed.takeIf { it.isNotEmpty() }
+                                )
+                            )
+                        }
                     }
+
                     if (eps.isNotEmpty()) {
                         epServers.add(EpisodeServer(serverName = srvName, items = eps))
                     }
@@ -464,12 +545,23 @@ class MovieRepository {
 
             return MovieDetailResult(
                 movie = movie,
-                availableServers = listOf(SourceServer.KKPHIM),
+                availableServers = listOf(server),
                 episodeServers = epServers,
                 description = desc
             )
         } catch (_: Exception) {
             return null
+        }
+    }
+
+    private fun resolveImageUrl(path: String, server: SourceServer): String {
+        if (path.startsWith("http")) return path
+        val clean = if (path.startsWith("/")) path else "/$path"
+        return when (server) {
+            SourceServer.KKPHIM -> "https://phimimg.com$clean"
+            SourceServer.OPHIM -> "https://img.ophim.live/uploads/movies$clean"
+            SourceServer.NGUONC -> "https://phim.nguonc.com$clean"
+            SourceServer.VSMOV -> "https://vsmov.com$clean"
         }
     }
 

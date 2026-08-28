@@ -1,4 +1,4 @@
-# 🎬 DragonFilm Android
+# DragonFilm Android
 
 <p align="center">
   <img src="app/src/main/res/drawable/logo.png" alt="DragonFilm Logo" width="130" />
@@ -28,22 +28,22 @@
 
 ---
 
-## ✨ Key Highlights
+## Key Highlights
 
 | Feature | Description |
 | :--- | :--- |
-| 🚀 **High-End Media3 Player** | Custom video controller powered by **AndroidX Media3 ExoPlayer**. Supports Native HLS (`.m3u8`), double-tap to seek ±10s, hold-to-speed-up (2×), speed dropdown (0.5×–2.0×), aspect ratio switcher (Fit / Zoom Fill), and automatic resume playback. |
-| 🌐 **Smart Embed Fallback** | Integrated WebView fallback player for embed-only stream sources (Server 3 NguonC & VSMov). |
-| ☁️ **Real-Time Cloud Sync** | Full 2-way cloud merge (`/api/user-data`) compatible with DragonFilm Web & iOS Schema v4. Seamlessly synchronizes watch history, resume bookmarks, watch-later list, liked movies, and favorite actors. |
-| 🎨 **Obsidian & Gold Aesthetics** | Cinema-grade dark theme featuring pure OLED deep black (`#07080A`), metallic gold gradients (`#F5C518`), and frosted glassmorphism overlays. |
-| 📊 **Live Trends & Rankings** | Real-time trending rankings curated from **Netflix Vietnam Top 10**, **TMDB Drama Weekly (KR & CN)**, and **AniList GraphQL Trending Anime (Weekly & Seasonal)**. |
-| 📅 **14-Day Release Calendar** | Interactive release schedule tracker for ongoing TV series and seasonal anime. |
-| 🔍 **Instant Search Engine** | Lightning-fast, debounced multi-server search querying across **KKPhim**, **OPhim**, **NguonC**, and **VSMov**. |
-| 💬 **Live Social Comments** | Real-time community discussion section for every movie and the homepage with 15s live polling. |
+| **High-End Media3 Player** | Custom video controller powered by **AndroidX Media3 ExoPlayer**. Supports Native HLS (`.m3u8`), double-tap to seek +/-10s, hold-to-speed-up (2x), speed dropdown (0.5x to 2.0x), aspect ratio switcher (Fit / Zoom Fill), and automatic resume playback. |
+| **Smart Embed Fallback** | Integrated WebView fallback player for embed-only stream sources (Server 3 NguonC & VSMov). |
+| **Real-Time Cloud Sync** | Full 2-way cloud merge (`/api/user-data`) compatible with DragonFilm Web & iOS Schema v4. Seamlessly synchronizes watch history, resume bookmarks, watch-later list, liked movies, and favorite actors. |
+| **Obsidian & Gold Aesthetics** | Cinema-grade dark theme featuring pure OLED deep black (`#07080A`), metallic gold gradients (`#F5C518`), and frosted glassmorphism overlays. |
+| **Live Trends & Rankings** | Real-time trending rankings curated from **Netflix Vietnam Top 10**, **TMDB Drama Weekly (KR & CN)**, and **AniList GraphQL Trending Anime (Weekly & Seasonal)**. |
+| **14-Day Release Calendar** | Interactive release schedule tracker for ongoing TV series and seasonal anime. |
+| **Instant Search Engine** | Fast, debounced multi-server search querying across **KKPhim**, **OPhim**, **NguonC**, and **VSMov**. |
+| **Live Social Comments** | Real-time community discussion section for every movie and the homepage with 15s live polling. |
 
 ---
 
-## 📱 Sideloading & Installation
+## Sideloading & Installation
 
 ### Option 1: Direct APK Install (Recommended)
 1. Download the latest pre-compiled **`DragonFilm.apk`** from [GitHub Releases](https://github.com/wyattz666/DragonFilmAndroid/releases/latest).
@@ -54,12 +54,12 @@
    ```
 
 ### Option 2: Android Studio Emulator
-- Start any virtual device in Android Studio (**Device Manager** ➔ **Play ▶️**).
+- Start any virtual device in Android Studio (**Device Manager** -> **Play**).
 - Drag and drop `DragonFilm.apk` directly into the emulator window.
 
 ---
 
-## 🛠 Prerequisites & Building from Source
+## Prerequisites & Building from Source
 
 ### Requirements
 - **Java Development Kit (JDK)**: OpenJDK 17+
@@ -84,11 +84,11 @@ The output APK file will be automatically generated at:
 1. Open **Android Studio**.
 2. Select **Open** and choose the `DragonFilmAndroid` project directory.
 3. Allow Gradle to sync dependencies.
-4. Select your target device or emulator and press **Run ▶️** (`Control + R` / `Shift + F10`).
+4. Select your target device or emulator and press **Run** (`Control + R` / `Shift + F10`).
 
 ---
 
-## 🏗 Project Architecture
+## Project Architecture
 
 ```text
 DragonFilmAndroid/
@@ -130,7 +130,7 @@ DragonFilmAndroid/
 
 ---
 
-## ⚡ Tech Stack
+## Tech Stack
 
 - **UI Framework**: [Jetpack Compose](https://developer.android.com/jetpack/compose) (Material 3)
 - **Video Engine**: [AndroidX Media3 ExoPlayer](https://developer.android.com/guide/topics/media/media3) with HLS Extensions
@@ -140,7 +140,7 @@ DragonFilmAndroid/
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the [MIT License](LICENSE).
 
@@ -149,5 +149,5 @@ This project is licensed under the [MIT License](LICENSE).
 ---
 
 <p align="center">
-  Crafted with ❤️ for cinema lovers by the <strong>DragonFilm Team</strong>.
+  Developed by the <strong>DragonFilm Team</strong>.
 </p>

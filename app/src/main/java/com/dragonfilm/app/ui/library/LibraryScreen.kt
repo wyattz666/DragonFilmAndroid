@@ -226,7 +226,7 @@ fun LibraryScreen(
                     EmptyStateView(
                         icon = Icons.Default.Favorite,
                         title = "Chưa có phim yêu thích",
-                        message = "Bấm ♡ ở trang phim để thêm vào đây."
+                        message = "Bấm biểu tượng yêu thích ở trang phim để thêm vào đây."
                     )
                 } else {
                     val chunked = likedMovies.chunked(3)

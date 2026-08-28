@@ -161,7 +161,7 @@ fun ProfileScreen(
                     )
                     Spacer(modifier = Modifier.height(3.dp))
                     Text(
-                        text = "Phát triển với ❤️ bởi DragonFilm Team",
+                        text = "Phát triển bởi DragonFilm Team",
                         style = DFTypography.small.copy(color = DFColor.TextMuted, fontSize = 10.sp)
                     )
                 }
@@ -220,7 +220,7 @@ private fun UserAccountCard(user: User) {
 
         if (user.isAdmin) {
             Spacer(modifier = Modifier.height(6.dp))
-            Badge(text = "👑 VIP ADMIN", backgroundColor = DFColor.Gold.copy(alpha = 0.25f), textColor = DFColor.Gold)
+            Badge(text = "VIP ADMIN", backgroundColor = DFColor.Gold.copy(alpha = 0.25f), textColor = DFColor.Gold)
         }
     }
 }

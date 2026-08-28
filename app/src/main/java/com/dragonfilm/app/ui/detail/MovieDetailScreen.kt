@@ -425,7 +425,7 @@ fun MovieDetailScreen(
                             )
                             Spacer(modifier = Modifier.height(3.dp))
                             Text(
-                                text = if (isDescriptionExpanded) "Thu gọn ▲" else "Xem thêm ▼",
+                                text = if (isDescriptionExpanded) "Thu gọn" else "Xem thêm",
                                 style = DFTypography.caption.copy(color = DFColor.Gold, fontSize = 11.sp),
                                 modifier = Modifier.clickable {
                                     isDescriptionExpanded = !isDescriptionExpanded

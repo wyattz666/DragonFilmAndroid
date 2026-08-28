@@ -318,7 +318,7 @@ fun PlayerScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "${currentEpisode.name} · Chọn tập ▼",
+                        text = "${currentEpisode.name} · Chọn tập",
                         style = DFTypography.caption.copy(color = DFColor.Gold, fontWeight = FontWeight.Bold)
                     )
                 }
@@ -671,7 +671,7 @@ fun PlayerScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "Chọn tập ▼",
+                                        text = "Chọn tập",
                                         style = DFTypography.caption.copy(color = Color.White)
                                     )
                                 }

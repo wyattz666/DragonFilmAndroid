@@ -565,7 +565,7 @@ private fun HeroSection(
                         .padding(14.dp)
                 ) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Badge(text = "🔥 HOT", backgroundColor = DFColor.Gold.copy(alpha = 0.2f), textColor = DFColor.Gold)
+                        Badge(text = "HOT", backgroundColor = DFColor.Gold.copy(alpha = 0.2f), textColor = DFColor.Gold)
                         if (movie.yearString.isNotEmpty()) {
                             Badge(text = movie.yearString, backgroundColor = Color.White.copy(alpha = 0.15f), textColor = Color.White)
                         }

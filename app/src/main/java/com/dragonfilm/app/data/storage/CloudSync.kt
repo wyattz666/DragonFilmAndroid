@@ -1,5 +1,6 @@
 package com.dragonfilm.app.data.storage
 
+import android.util.Log
 import com.dragonfilm.app.data.api.ApiClient
 import com.dragonfilm.app.data.model.HistoryItem
 import com.dragonfilm.app.data.model.Movie
@@ -7,7 +8,6 @@ import com.dragonfilm.app.data.model.SavedActor
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -25,28 +25,46 @@ class CloudSync(
         if (isSyncing) return@withContext false
         isSyncing = true
         try {
-            // 1. Pull latest from cloud /api/user-data
+            // 1. Refresh latest user profile (avatar, username, email)
+            try {
+                authManager.refreshProfile()
+            } catch (e: Exception) {
+                Log.w("CloudSync", "Profile refresh warning: ${e.message}")
+            }
+
+            // 2. Pull latest user data from cloud /api/user-data
             val getResp = ApiClient.service.getUserData("Bearer $token")
             val getJsonStr = getResp.string()
             val getObj = JSONObject(getJsonStr)
-            if (getObj.optBoolean("ok", true) && getObj.has("data")) {
-                val remoteData = getObj.optJSONObject("data")
-                if (remoteData != null) {
-                    mergeRemote(remoteData)
+
+            var remoteData: JSONObject? = null
+            if (getObj.has("data")) {
+                val dataVal = getObj.opt("data")
+                if (dataVal is JSONObject) {
+                    remoteData = dataVal
+                } else if (dataVal is String && dataVal.startsWith("{")) {
+                    remoteData = try { JSONObject(dataVal) } catch (_: Exception) { null }
                 }
+            } else if (getObj.has("history") || getObj.has("movieLibrary")) {
+                remoteData = getObj
+            }
+
+            if (remoteData != null) {
+                mergeRemote(remoteData)
             }
 
             localStore.refreshState()
 
-            // 2. Build local snapshot
+            // 3. Build comprehensive local snapshot conforming to Web & iOS Schema v4
             val snapshot = buildLocalSnapshot()
 
-            // 3. Push to /api/user-data
+            // 4. Push updated state back to /api/user-data
             val payload = mapOf("data" to snapshot)
             ApiClient.service.postUserData("Bearer $token", payload)
 
             true
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e("CloudSync", "Sync error: ${e.message}", e)
             false
         } finally {
             isSyncing = false
@@ -56,28 +74,39 @@ class CloudSync(
     private fun mergeRemote(remote: JSONObject) {
         val gson = ApiClient.gson
 
-        // Merge History
+        // Merge Watch History
         val remoteHistoryRaw = remote.optJSONArray("history")
         if (remoteHistoryRaw != null && remoteHistoryRaw.length() > 0) {
-            val remoteHistory: List<HistoryItem>? = gson.fromJson(
-                remoteHistoryRaw.toString(),
-                object : TypeToken<List<HistoryItem>>() {}.type
-            )
+            val remoteHistory: List<HistoryItem>? = try {
+                gson.fromJson(
+                    remoteHistoryRaw.toString(),
+                    object : TypeToken<List<HistoryItem>>() {}.type
+                )
+            } catch (_: Exception) { null }
+
             if (!remoteHistory.isNullOrEmpty()) {
                 val localHistory = localStore.getHistory()
                 val historyMap = mutableMapOf<String, HistoryItem>()
+
                 for (item in localHistory) {
-                    if (item.slug.isNotEmpty()) historyMap[item.slug] = item
+                    if (item.slug.isNotEmpty()) {
+                        historyMap[item.slug] = item
+                    }
                 }
+
                 for (item in remoteHistory) {
                     if (item.slug.isNotEmpty()) {
                         val existing = historyMap[item.slug]
-                        if (existing == null || item.watchedAt > existing.watchedAt) {
+                        if (existing == null || item.normalizedWatchedAt > existing.normalizedWatchedAt) {
                             historyMap[item.slug] = item
                         }
                     }
                 }
-                val sorted = historyMap.values.sortedByDescending { it.watchedAt }.take(50)
+
+                val sorted = historyMap.values
+                    .sortedByDescending { it.normalizedWatchedAt }
+                    .take(50)
+
                 localStore.saveHistory(sorted)
             }
         }
@@ -107,10 +136,13 @@ class CloudSync(
         }
 
         if (watchLaterArray != null && watchLaterArray.length() > 0) {
-            val remoteList: List<Movie>? = gson.fromJson(
-                watchLaterArray.toString(),
-                object : TypeToken<List<Movie>>() {}.type
-            )
+            val remoteList: List<Movie>? = try {
+                gson.fromJson(
+                    watchLaterArray.toString(),
+                    object : TypeToken<List<Movie>>() {}.type
+                )
+            } catch (_: Exception) { null }
+
             if (!remoteList.isNullOrEmpty()) {
                 val map = localStore.getWatchLater().associateBy { it.slug }.toMutableMap()
                 for (m in remoteList) {
@@ -123,10 +155,13 @@ class CloudSync(
         }
 
         if (likedArray != null && likedArray.length() > 0) {
-            val remoteList: List<Movie>? = gson.fromJson(
-                likedArray.toString(),
-                object : TypeToken<List<Movie>>() {}.type
-            )
+            val remoteList: List<Movie>? = try {
+                gson.fromJson(
+                    likedArray.toString(),
+                    object : TypeToken<List<Movie>>() {}.type
+                )
+            } catch (_: Exception) { null }
+
             if (!remoteList.isNullOrEmpty()) {
                 val map = localStore.getLikedMovies().associateBy { it.slug }.toMutableMap()
                 for (m in remoteList) {
@@ -141,10 +176,13 @@ class CloudSync(
         // Merge Actor Library
         val actorArray = remote.optJSONArray("actorLibrary") ?: remote.optJSONArray("actors")
         if (actorArray != null && actorArray.length() > 0) {
-            val remoteList: List<SavedActor>? = gson.fromJson(
-                actorArray.toString(),
-                object : TypeToken<List<SavedActor>>() {}.type
-            )
+            val remoteList: List<SavedActor>? = try {
+                gson.fromJson(
+                    actorArray.toString(),
+                    object : TypeToken<List<SavedActor>>() {}.type
+                )
+            } catch (_: Exception) { null }
+
             if (!remoteList.isNullOrEmpty()) {
                 val map = localStore.getFavoriteActors().associateBy { it.name }.toMutableMap()
                 for (a in remoteList) {
@@ -167,13 +205,40 @@ class CloudSync(
             "type" to "cloud-data",
             "version" to 4,
             "savedAt" to sdf.format(Date()),
-            "history" to localStore.getHistory(),
+            "history" to localStore.getHistory().map { item ->
+                mapOf(
+                    "slug" to item.slug,
+                    "name" to item.name,
+                    "year" to item.year,
+                    "_server" to item.server,
+                    "poster_url" to item.posterUrl,
+                    "resume_key" to item.resumeKey.ifEmpty { "${item.server}_${item.slug}_${item.episodeSlug}" },
+                    "source_name" to item.sourceName,
+                    "episode_name" to item.episodeName,
+                    "episode_slug" to item.episodeSlug,
+                    "episode_server_name" to item.episodeServerName,
+                    "episode_server_idx" to item.episodeServerIdx,
+                    "episode_index0" to item.episodeIndex0,
+                    "episode_number" to item.episodeNumber,
+                    "watched_seconds" to item.watchedSeconds,
+                    "duration_seconds" to item.durationSeconds,
+                    "progress_percent" to item.progressPercent,
+                    "watchedAt" to item.normalizedWatchedAt
+                )
+            },
             "resumeTimes" to localStore.getResumeTimes(),
             "movieLibrary" to mapOf(
                 "watchLater" to localStore.getWatchLater(),
                 "liked" to localStore.getLikedMovies()
             ),
-            "actorLibrary" to localStore.getFavoriteActors()
+            "actorLibrary" to localStore.getFavoriteActors().map { actor ->
+                mapOf(
+                    "name" to actor.name,
+                    "character" to actor.character,
+                    "profile_url" to actor.profileUrl,
+                    "addedAt" to actor.normalizedAddedAt
+                )
+            }
         )
     }
 }

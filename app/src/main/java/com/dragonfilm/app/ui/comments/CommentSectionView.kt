@@ -255,19 +255,13 @@ private fun CommentRowView(
             .padding(DFSpacing.lg),
         verticalAlignment = Alignment.Top
     ) {
-        // Avatar Initial
-        Box(
-            modifier = Modifier
-                .size(34.dp)
-                .clip(CircleShape)
-                .background(DFColor.Bg3),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = comment.user.username.take(1).uppercase(),
-                style = DFTypography.headline.copy(color = DFColor.Gold, fontSize = 13.sp)
-            )
-        }
+        // User Avatar
+        com.dragonfilm.app.ui.profile.UserAvatarView(
+            avatarUrl = comment.user.avatarUrl,
+            username = comment.user.username,
+            size = 34.dp,
+            textSize = 13.sp
+        )
 
         Spacer(modifier = Modifier.width(10.dp))
 

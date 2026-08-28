@@ -82,7 +82,7 @@ interface DragonFilmApiService {
         @Body body: Map<String, String>
     ): AuthResponse
 
-    @GET("/api/auth/profile")
+    @GET("/api/user/profile")
     suspend fun getProfile(
         @Header("Authorization") token: String
     ): AuthResponse

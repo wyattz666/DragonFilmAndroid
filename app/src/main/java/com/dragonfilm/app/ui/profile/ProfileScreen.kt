@@ -1,5 +1,8 @@
 package com.dragonfilm.app.ui.profile
 
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,6 +30,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,11 +42,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.dragonfilm.app.data.model.User
 import com.dragonfilm.app.data.storage.AuthManager
 import com.dragonfilm.app.data.storage.CloudSync
@@ -54,6 +65,63 @@ import com.dragonfilm.app.ui.theme.DFSpacing
 import com.dragonfilm.app.ui.theme.DFTypography
 import com.dragonfilm.app.ui.theme.glassCard
 import kotlinx.coroutines.launch
+
+@Composable
+fun UserAvatarView(
+    avatarUrl: String?,
+    username: String,
+    modifier: Modifier = Modifier,
+    size: Dp = 76.dp,
+    textSize: TextUnit = 28.sp
+) {
+    val bitmap = remember(avatarUrl) {
+        if (!avatarUrl.isNullOrEmpty() && avatarUrl.startsWith("data:image")) {
+            try {
+                val base64Data = avatarUrl.substringAfter("base64,")
+                val decodedBytes = Base64.decode(base64Data, Base64.DEFAULT)
+                BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+            } catch (_: Exception) {
+                null
+            }
+        } else {
+            null
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(DFColor.Bg3)
+            .border(1.5.dp, DFColor.GlassBorderGradient, CircleShape)
+            .shadow(8.dp, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = username,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else if (!avatarUrl.isNullOrEmpty() && (avatarUrl.startsWith("http") || avatarUrl.startsWith("/"))) {
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(avatarUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = username,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Text(
+                text = username.take(1).uppercase().ifEmpty { "?" },
+                style = DFTypography.largeTitle.copy(color = DFColor.Gold, fontSize = textSize)
+            )
+        }
+    }
+}
 
 @Composable
 fun ProfileScreen(
@@ -71,6 +139,13 @@ fun ProfileScreen(
     val likedMovies by localStore.likedFlow.collectAsState()
 
     val scope = rememberCoroutineScope()
+
+    // Automatically sync and refresh profile on tab load
+    LaunchedEffect(currentUser) {
+        if (currentUser != null && cloudSync != null) {
+            cloudSync.sync()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -172,7 +247,12 @@ fun ProfileScreen(
     if (showAuthDialog) {
         AuthDialog(
             authManager = authManager,
-            onDismiss = { showAuthDialog = false }
+            onDismiss = {
+                showAuthDialog = false
+                scope.launch {
+                    cloudSync?.sync()
+                }
+            }
         )
     }
 }
@@ -186,21 +266,13 @@ private fun UserAccountCard(user: User) {
             .padding(vertical = 20.dp, horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Avatar Circle
-        Box(
-            modifier = Modifier
-                .size(76.dp)
-                .clip(CircleShape)
-                .background(DFColor.Bg3)
-                .border(1.5.dp, DFColor.GlassBorderGradient, CircleShape)
-                .shadow(8.dp, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = user.username.take(1).uppercase(),
-                style = DFTypography.largeTitle.copy(color = DFColor.Gold, fontSize = 28.sp)
-            )
-        }
+        // Dynamic Avatar Circle (Image or Initial)
+        UserAvatarView(
+            avatarUrl = user.avatarUrl,
+            username = user.username,
+            size = 76.dp,
+            textSize = 28.sp
+        )
 
         Spacer(modifier = Modifier.height(10.dp))
 
@@ -238,40 +310,33 @@ private fun GuestCard(onLoginClick: () -> Unit) {
             imageVector = Icons.Default.AccountCircle,
             contentDescription = null,
             tint = DFColor.Gold,
-            modifier = Modifier.size(50.dp)
+            modifier = Modifier.size(56.dp)
         )
-
         Spacer(modifier = Modifier.height(10.dp))
-
         Text(
-            text = "Chưa đăng nhập",
+            text = "Tài khoản khách",
             style = DFTypography.title,
             color = DFColor.Text
         )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Đăng nhập để đồng bộ lịch sử xem và thư viện phim giữa Web, iOS và Android.",
-            style = DFTypography.body.copy(fontSize = 13.sp),
+            text = "Đăng nhập để đồng bộ lịch sử xem và phim yêu thích trên mọi thiết bị.",
+            style = DFTypography.body.copy(fontSize = 12.5.sp),
             color = DFColor.TextDim,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 8.dp)
         )
-
         Spacer(modifier = Modifier.height(16.dp))
 
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .shadow(6.dp, CircleShape, ambientColor = DFColor.Gold, spotColor = DFColor.Gold)
                 .clip(CircleShape)
                 .background(DFColor.GoldGradient)
-                .clickable(onClick = onLoginClick)
-                .padding(vertical = 11.dp),
-            contentAlignment = Alignment.Center
+                .clickable { onLoginClick() }
+                .padding(horizontal = 24.dp, vertical = 10.dp)
         ) {
             Text(
-                text = "Đăng Nhập Ngay",
+                text = "Đăng nhập / Đăng ký",
                 style = DFTypography.headline.copy(color = Color(0xFF07080A), fontSize = 13.5.sp)
             )
         }
@@ -279,25 +344,21 @@ private fun GuestCard(onLoginClick: () -> Unit) {
 }
 
 @Composable
-private fun StatTile(
-    label: String,
-    count: String,
-    modifier: Modifier = Modifier
-) {
+private fun StatTile(label: String, count: String, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
-            .glassCard(cornerRadius = DFRadius.md)
-            .padding(vertical = 10.dp),
+            .glassCard(cornerRadius = DFRadius.lg)
+            .padding(vertical = 12.dp, horizontal = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = count,
-            style = DFTypography.title.copy(color = DFColor.Gold, fontWeight = FontWeight.Black, fontSize = 16.sp)
+            style = DFTypography.largeTitle.copy(color = DFColor.Gold, fontSize = 20.sp)
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = label,
-            style = DFTypography.small.copy(color = DFColor.TextMuted, fontSize = 10.sp)
+            style = DFTypography.small.copy(color = DFColor.TextMuted, fontSize = 11.sp)
         )
     }
 }
@@ -308,43 +369,41 @@ private fun ActionRowItem(
     title: String,
     subtitle: String? = null,
     titleColor: Color = DFColor.Text,
-    iconColor: Color = DFColor.GoldDim,
+    iconColor: Color = DFColor.Gold,
     onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = iconColor,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(20.dp)
         )
-
         Spacer(modifier = Modifier.width(12.dp))
-
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = DFTypography.body.copy(color = titleColor, fontSize = 13.sp)
+                style = DFTypography.headline.copy(color = titleColor, fontSize = 13.5.sp)
             )
-            if (!subtitle.isNullOrEmpty()) {
+            if (subtitle != null) {
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = subtitle,
-                    style = DFTypography.caption.copy(color = DFColor.TextMuted, fontSize = 10.5.sp)
+                    style = DFTypography.small.copy(color = DFColor.TextMuted, fontSize = 11.sp)
                 )
             }
         }
-
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
             contentDescription = null,
-            tint = DFColor.TextMuted,
-            modifier = Modifier.size(15.dp)
+            tint = Color.White.copy(alpha = 0.3f),
+            modifier = Modifier.size(16.dp)
         )
     }
 }

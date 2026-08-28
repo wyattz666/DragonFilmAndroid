@@ -159,24 +159,32 @@ fun PlayerScreen(
 
     fun saveWatchProgress(force: Boolean = false) {
         val currentSec = if (isEmbedMode) 0.0 else (currentPositionMs / 1000.0)
+        val totalSec = if (isEmbedMode) 0.0 else (durationMs / 1000.0)
+        val progressPct = if (totalSec > 0) ((currentSec / totalSec) * 100.0).coerceIn(0.0, 100.0) else 0.0
         val epIdx = allEpisodes.indexOfFirst { it.id == currentEpisode.id }.coerceAtLeast(0)
+        val resumeKey = "${server.rawValue}_${movie.slug}_${currentEpisode.slug}"
         val item = HistoryItem(
             slug = movie.slug,
             name = movie.name,
             posterUrl = movie.bestPoster,
             year = movie.yearString,
             server = server.rawValue,
-            sourceName = "",
+            sourceName = "Server",
             episodeName = currentEpisode.name,
             episodeSlug = currentEpisode.slug,
             episodeServerName = server.displayName,
             episodeServerIdx = 0,
             episodeIndex0 = epIdx,
             episodeNumber = epIdx + 1,
-            watchedSeconds = currentSec
+            watchedSeconds = currentSec,
+            durationSeconds = totalSec,
+            progressPercent = progressPct,
+            resumeKey = resumeKey,
+            watchedAt = System.currentTimeMillis().toDouble()
         )
         localStore.addToHistory(item)
         if (currentSec > 5) {
+            localStore.setResumeTime(resumeKey, currentSec)
             localStore.setResumeTime(movie.slug, currentSec)
         }
         scope.launch {

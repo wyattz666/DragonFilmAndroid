@@ -15,16 +15,16 @@ data class User(
     @SerializedName("phone")
     val phone: String = "",
 
-    @SerializedName("avatar_url", alternate = ["avatarUrl"])
+    @SerializedName("avatar_url", alternate = ["avatarUrl", "avatar", "picture", "photo_url", "photoURL", "image_url"])
     val avatarUrl: String = "",
 
     @SerializedName("role")
     val role: String = "user",
 
-    @SerializedName("is_admin", alternate = ["isAdmin"])
+    @SerializedName("is_admin", alternate = ["isAdmin", "admin"])
     val isAdmin: Boolean = false,
 
-    @SerializedName("created_at")
+    @SerializedName("created_at", alternate = ["createdAt"])
     val createdAt: String = ""
 )
 
@@ -69,30 +69,30 @@ data class CommentUser(
     @SerializedName("username")
     val username: String = "",
 
-    @SerializedName("avatar_url", alternate = ["avatarUrl"])
+    @SerializedName("avatar_url", alternate = ["avatarUrl", "avatar", "picture", "photo_url", "photoURL", "image_url"])
     val avatarUrl: String? = null,
 
     @SerializedName("role")
     val role: String = "user",
 
-    @SerializedName("is_admin", alternate = ["isAdmin"])
+    @SerializedName("is_admin", alternate = ["isAdmin", "admin"])
     val isAdmin: Boolean = false
 )
 
 data class HistoryItem(
-    @SerializedName("slug")
+    @SerializedName("slug", alternate = ["movie_slug"])
     val slug: String = "",
 
-    @SerializedName("name")
+    @SerializedName("name", alternate = ["movie_name"])
     val name: String = "",
 
     @SerializedName("poster_url", alternate = ["posterURL", "thumb_url", "thumbURL"])
     val posterUrl: String = "",
 
-    @SerializedName("year")
+    @SerializedName("year", alternate = ["movie_year"])
     val year: String = "",
 
-    @SerializedName("_server", alternate = ["server"])
+    @SerializedName("_server", alternate = ["server", "movie_server"])
     val server: String = "kkphim",
 
     @SerializedName("source_name", alternate = ["sourceName"])
@@ -116,29 +116,44 @@ data class HistoryItem(
     @SerializedName("episode_number", alternate = ["episodeNumber"])
     val episodeNumber: Int = 1,
 
-    @SerializedName("watched_seconds", alternate = ["watchedSeconds"])
+    @SerializedName("watched_seconds", alternate = ["watchedSeconds", "seconds"])
     val watchedSeconds: Double = 0.0,
 
+    @SerializedName("duration_seconds", alternate = ["durationSeconds"])
+    val durationSeconds: Double = 0.0,
+
+    @SerializedName("progress_percent", alternate = ["progressPercent"])
+    val progressPercent: Double = 0.0,
+
+    @SerializedName("resume_key", alternate = ["resumeKey"])
+    val resumeKey: String = "",
+
     @SerializedName("watchedAt", alternate = ["watched_at"])
-    val watchedAt: Double = System.currentTimeMillis() / 1000.0
+    val watchedAt: Double = System.currentTimeMillis().toDouble()
 ) {
     val id: String
         get() = "$slug-$episodeSlug"
+
+    val normalizedWatchedAt: Long
+        get() = if (watchedAt < 10_000_000_000.0) (watchedAt * 1000).toLong() else watchedAt.toLong()
 }
 
 data class SavedActor(
-    @SerializedName("name")
+    @SerializedName("name", alternate = ["actor_name"])
     val name: String = "",
 
-    @SerializedName("character")
+    @SerializedName("character", alternate = ["character_name"])
     val character: String = "",
 
-    @SerializedName("profile_url", alternate = ["profileURL"])
+    @SerializedName("profile_url", alternate = ["profileURL", "avatar", "image_url"])
     val profileUrl: String = "",
 
     @SerializedName("addedAt", alternate = ["added_at"])
-    val addedAt: Double = System.currentTimeMillis() / 1000.0
+    val addedAt: Double = System.currentTimeMillis().toDouble()
 ) {
     val id: String
         get() = name
+
+    val normalizedAddedAt: Long
+        get() = if (addedAt < 10_000_000_000.0) (addedAt * 1000).toLong() else addedAt.toLong()
 }

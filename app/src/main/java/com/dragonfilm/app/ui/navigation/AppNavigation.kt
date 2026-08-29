@@ -69,25 +69,7 @@ fun AppNavigation(
         destinationStack = listOf(AppDestination.Main(tab))
     }
 
-    // Auto telemetry logging on destination change
-    LaunchedEffect(currentDestination) {
-        when (val dest = currentDestination) {
-            is AppDestination.Main -> {
-                analyticsManager?.trackScreen(dest.tab.route, "Tab: ${dest.tab.title}")
-            }
-            is AppDestination.Detail -> {
-                analyticsManager?.trackMovieView(dest.slug, "Phim: ${dest.slug}")
-            }
-            is AppDestination.Player -> {
-                analyticsManager?.trackWatchEpisode(
-                    dest.movie.slug,
-                    dest.movie.name,
-                    dest.episode.name,
-                    dest.server.displayName
-                )
-            }
-        }
-    }
+    // Navigation destination resolution
 
     when (val dest = currentDestination) {
         is AppDestination.Player -> {

@@ -14,32 +14,21 @@ class AnalyticsManager(
     private val authManager: AuthManager
 ) {
     private val scope = CoroutineScope(Dispatchers.IO)
+    private val prefs = context.getSharedPreferences("df_analytics_prefs", Context.MODE_PRIVATE)
 
     fun trackAppOpen() {
+        val now = System.currentTimeMillis()
+        val lastPing = prefs.getLong("last_telemetry_ping", 0L)
+        // Rate limit: Only send 1 telemetry ping per hour per device to conserve D1 write quota
+        if (now - lastPing < 60 * 60 * 1000L) {
+            return
+        }
+
+        prefs.edit().putLong("last_telemetry_ping", now).apply()
+
         trackEvent(
             pageUrl = "dragonfilm://android/app-launch",
             pageTitle = "Khởi động ứng dụng DragonFilm Android"
-        )
-    }
-
-    fun trackScreen(screenName: String, title: String? = null) {
-        trackEvent(
-            pageUrl = "dragonfilm://android/screen/$screenName",
-            pageTitle = title ?: "DragonFilm - $screenName"
-        )
-    }
-
-    fun trackMovieView(slug: String, movieName: String) {
-        trackEvent(
-            pageUrl = "dragonfilm://android/movie/$slug",
-            pageTitle = "Xem chi tiết: $movieName"
-        )
-    }
-
-    fun trackWatchEpisode(slug: String, movieName: String, epName: String, server: String) {
-        trackEvent(
-            pageUrl = "dragonfilm://android/player/$slug",
-            pageTitle = "Đang xem: $movieName ($epName - $server)"
         )
     }
 
@@ -66,8 +55,7 @@ class AnalyticsManager(
                     body = payload
                 )
             } catch (e: Exception) {
-                // Silently ignore telemetry failure to avoid interrupting UX
-                Log.d("AnalyticsManager", "Telemetry ping failed: ${e.message}")
+                Log.d("AnalyticsManager", "Telemetry ping ignored: ${e.message}")
             }
         }
     }

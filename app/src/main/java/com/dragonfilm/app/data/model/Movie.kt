@@ -73,20 +73,51 @@ data class Movie(
             else -> ""
         }
 
+    private val isReverseSchemaServer: Boolean
+        get() {
+            val s = server?.lowercase() ?: ""
+            if (s == "nguonc" || s == "vsmov" || s == "ophim") return true
+            if (posterUrl.contains("nguonc") || posterUrl.contains("vsmov")) return true
+            if (thumbUrl.contains("nguonc") || thumbUrl.contains("vsmov")) return true
+            return false
+        }
+
     val bestBanner: String
         get() {
             if (!sourceThumbUrl.isNullOrEmpty()) return sourceThumbUrl
-            if (thumbUrl.isNotEmpty()) return thumbUrl
-            if (!tmdb?.backdropUrl.isNullOrEmpty()) return tmdb?.backdropUrl ?: ""
-            return bestPoster
+            return if (isReverseSchemaServer) {
+                // For NguonC & VSMov: poster_url is the horizontal 16:9 banner!
+                if (posterUrl.isNotEmpty()) posterUrl
+                else if (!tmdb?.backdropUrl.isNullOrEmpty()) tmdb?.backdropUrl ?: ""
+                else if (!tmdb?.thumbUrl.isNullOrEmpty()) tmdb?.thumbUrl ?: ""
+                else if (thumbUrl.isNotEmpty()) thumbUrl
+                else bestPoster
+            } else {
+                // For KKPhim: thumb_url is the horizontal 16:9 banner!
+                if (thumbUrl.isNotEmpty()) thumbUrl
+                else if (!tmdb?.backdropUrl.isNullOrEmpty()) tmdb?.backdropUrl ?: ""
+                else if (!tmdb?.thumbUrl.isNullOrEmpty()) tmdb?.thumbUrl ?: ""
+                else if (posterUrl.isNotEmpty()) posterUrl
+                else bestPoster
+            }
         }
 
     val bestPoster: String
         get() {
             if (!sourcePosterUrl.isNullOrEmpty()) return sourcePosterUrl
-            if (posterUrl.isNotEmpty()) return posterUrl
-            if (!tmdb?.posterUrl.isNullOrEmpty()) return tmdb?.posterUrl ?: ""
-            return thumbUrl
+            return if (isReverseSchemaServer) {
+                // For NguonC & VSMov: thumb_url is the portrait vertical 2:3 poster!
+                if (thumbUrl.isNotEmpty()) thumbUrl
+                else if (!tmdb?.posterUrl.isNullOrEmpty()) tmdb?.posterUrl ?: ""
+                else if (posterUrl.isNotEmpty()) posterUrl
+                else ""
+            } else {
+                // For KKPhim: poster_url is the portrait vertical 2:3 poster!
+                if (posterUrl.isNotEmpty()) posterUrl
+                else if (!tmdb?.posterUrl.isNullOrEmpty()) tmdb?.posterUrl ?: ""
+                else if (thumbUrl.isNotEmpty()) thumbUrl
+                else ""
+            }
         }
 
     val bestThumb: String

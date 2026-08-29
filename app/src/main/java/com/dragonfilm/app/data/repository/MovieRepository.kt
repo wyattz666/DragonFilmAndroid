@@ -691,11 +691,10 @@ class MovieRepository {
     }
 
     private fun resolveImageUrl(path: String, server: SourceServer): String {
-        if (path.startsWith("http")) return path
+        if (path.startsWith("http://") || path.startsWith("https://")) return path
         val clean = if (path.startsWith("/")) path else "/$path"
         return when (server) {
             SourceServer.KKPHIM -> "https://phimimg.com$clean"
-            SourceServer.OPHIM -> "https://img.ophim.live/uploads/movies$clean"
             SourceServer.NGUONC -> "https://phim.nguonc.com$clean"
             SourceServer.VSMOV -> "https://vsmov.com$clean"
         }

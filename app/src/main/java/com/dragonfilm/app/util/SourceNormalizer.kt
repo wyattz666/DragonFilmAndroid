@@ -4,7 +4,6 @@ import java.net.URLEncoder
 
 enum class SourceServer(val rawValue: String, val displayName: String, val shortName: String) {
     KKPHIM("kkphim", "Server 1", "SV 1"),
-    OPHIM("ophim", "Server 2", "SV 2"),
     NGUONC("nguonc", "Server 3", "SV 3"),
     VSMOV("vsmov", "Server 4", "SV 4");
 
@@ -31,7 +30,7 @@ object SourceNormalizer {
         }
 
         return when (server) {
-            SourceServer.KKPHIM, SourceServer.OPHIM -> when (operation) {
+            SourceServer.KKPHIM -> when (operation) {
                 "latest" -> "/danh-sach/phim-moi-cap-nhat?page=$page"
                 "search" -> "/v1/api/tim-kiem?keyword=$kw&page=$page"
                 "detail" -> "/phim/${slug ?: ""}"

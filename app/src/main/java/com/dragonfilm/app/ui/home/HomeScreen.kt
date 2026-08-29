@@ -52,16 +52,23 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.lerp
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import kotlin.math.absoluteValue
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import coil.size.Scale
@@ -184,19 +191,24 @@ fun HomeScreen(
         ) {
             // Hero Section
             item {
-                Spacer(modifier = Modifier.height(8.dp))
                 if (isLoadingHome && heroMovies.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(320.dp)
+                            .height(520.dp)
                             .padding(horizontal = 16.dp)
-                            .clip(RoundedCornerShape(DFRadius.lg))
+                            .clip(RoundedCornerShape(DFRadius.xl))
                             .shimmer()
                     )
                 } else if (heroMovies.isNotEmpty()) {
                     HeroSection(
                         movies = heroMovies,
+                        activeFilter = activeFilter,
+                        onFilterSelected = { filter ->
+                            activeFilter = filter
+                            loadLatest(1, filter, true)
+                        },
+                        onOpenFilterDialog = { showFilterDialog = true },
                         onMovieClick = onMovieClick
                     )
                 }
@@ -510,7 +522,6 @@ private fun TopStickyHeader(onSearchClick: () -> Unit) {
             modifier = Modifier
                 .size(36.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.08f))
                 .border(width = 0.8.dp, brush = DFColor.GlassBorderGradient, shape = CircleShape)
         ) {
             Icon(
@@ -523,162 +534,509 @@ private fun TopStickyHeader(onSearchClick: () -> Unit) {
     }
 }
 
+// MARK: - iOS-Identical 3D CoverFlow Cinema Hero
+
+private val Movie.cleanQuality: String
+    get() = quality?.takeIf { it.isNotBlank() } ?: "HD"
+
+private val Movie.episodeBadge: String
+    get() = if (episodeCurrent.isNotBlank()) episodeCurrent else if (isSeries) "Đang Cập Nhật" else "Bản Đẹp"
+
+private val Movie.categoryString: String
+    get() {
+        val names = category.map { it.name }.filter { it.isNotBlank() }
+        return if (names.isEmpty()) "Phim Điện Ảnh" else names.take(3).joinToString(", ")
+    }
+
+private val Movie.formattedScore: Pair<String, String>
+    get() {
+        if (imdb != null && imdb.scoreString != "N/A") {
+            return Pair("IMDb", imdb.scoreString)
+        }
+        if (tmdb != null && tmdb.scoreString != "N/A") {
+            return Pair("TMDB", tmdb.scoreString)
+        }
+        return Pair("Đánh giá", "8.9")
+    }
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun HeroSection(
     movies: List<Movie>,
+    activeFilter: CatalogFilter,
+    onFilterSelected: (CatalogFilter) -> Unit,
+    onOpenFilterDialog: () -> Unit,
     onMovieClick: (String) -> Unit
 ) {
-    val pagerState = rememberPagerState(pageCount = { minOf(movies.size, 5) })
+    val heroList = remember(movies) { movies.take(8) }
+    if (heroList.isEmpty()) return
+
+    val pagerState = rememberPagerState(pageCount = { heroList.size })
+    val currentMovie = heroList.getOrNull(pagerState.currentPage) ?: heroList.first()
 
     LaunchedEffect(pagerState) {
         while (true) {
             delay(5000)
-            if (movies.isNotEmpty()) {
-                val next = (pagerState.currentPage + 1) % minOf(movies.size, 5)
+            if (heroList.isNotEmpty()) {
+                val next = (pagerState.currentPage + 1) % heroList.size
                 pagerState.animateScrollToPage(next)
             }
         }
     }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
-        HorizontalPager(
-            state = pagerState,
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+    ) {
+        // 1. Immersive Ambient Blurred Backdrop
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(currentMovie.bestPoster)
+                .crossfade(300)
+                .build(),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(330.dp)
-                .padding(horizontal = 16.dp)
-        ) { page ->
-            val movie = movies[page]
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(DFRadius.lg))
-                    .background(DFColor.Bg3)
-                    .border(width = 0.8.dp, color = Color.White.copy(alpha = 0.12f), shape = RoundedCornerShape(DFRadius.lg))
-                    .clickable { onMovieClick(movie.slug) }
-            ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(movie.bestBanner)
-                        .crossfade(150)
-                        .scale(Scale.FILL)
-                        .build(),
-                    contentDescription = movie.name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
+                .height(540.dp)
+                .blur(45.dp)
+                .alpha(0.38f)
+        )
 
-                // Cinematic Gradient Overlay
+        // Multi-stop gradient fading to pure OLED black background
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(540.dp)
+                .background(
+                    Brush.verticalGradient(
+                        0.0f to DFColor.Bg.copy(alpha = 0.4f),
+                        0.25f to Color.Transparent,
+                        0.65f to DFColor.Bg.copy(alpha = 0.75f),
+                        0.90f to DFColor.Bg.copy(alpha = 0.95f),
+                        1.0f to DFColor.Bg
+                    )
+                )
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // 2. Category Navigation Filter Chips
+            CategoryPillsRow(
+                activeFilter = activeFilter,
+                onFilterSelected = onFilterSelected,
+                onOpenFilterDialog = onOpenFilterDialog
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 3. 3D CoverFlow Card Carousel
+            HorizontalPager(
+                state = pagerState,
+                contentPadding = PaddingValues(horizontal = 76.dp),
+                pageSpacing = 16.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(320.dp)
+            ) { page ->
+                val movie = heroList[page]
+                val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction).absoluteValue
+                val cardScale = lerp(0.86f, 1f, 1f - pageOffset.coerceIn(0f, 1f))
+                val cardAlpha = lerp(0.55f, 1f, 1f - pageOffset.coerceIn(0f, 1f))
+                val isSelected = pagerState.currentPage == page
+
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(DFColor.HeroBackdropGradient)
-                )
-
-                // Hero Content
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(14.dp)
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Badge(text = "HOT", backgroundColor = DFColor.Gold.copy(alpha = 0.2f), textColor = DFColor.Gold)
-                        if (movie.yearString.isNotEmpty()) {
-                            Badge(text = movie.yearString, backgroundColor = Color.White.copy(alpha = 0.15f), textColor = Color.White)
+                        .graphicsLayer {
+                            scaleX = cardScale
+                            scaleY = cardScale
+                            this.alpha = cardAlpha
+                            cameraDistance = 12f * density
+                            rotationY = if (page < pagerState.currentPage) 10f * pageOffset.coerceIn(0f, 1f)
+                                        else if (page > pagerState.currentPage) -10f * pageOffset.coerceIn(0f, 1f)
+                                        else 0f
                         }
-                        if (movie.episodeCurrent.isNotEmpty()) {
-                            Badge(text = movie.episodeCurrent, backgroundColor = DFColor.Crimson.copy(alpha = 0.85f), textColor = Color.White)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = movie.name,
-                        style = DFTypography.heroTitle.copy(fontSize = 18.sp, lineHeight = 22.sp),
-                        color = Color.White,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    if (movie.originName.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = movie.originName,
-                            style = DFTypography.caption.copy(color = DFColor.TextDim, fontSize = 11.sp),
-                            maxLines = 1
+                        .width(220.dp)
+                        .height(310.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(DFColor.Bg3)
+                        .border(
+                            width = if (isSelected) 1.2.dp else 0.6.dp,
+                            color = if (isSelected) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.10f),
+                            shape = RoundedCornerShape(18.dp)
                         )
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        // Xem Ngay Button
-                        Row(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(DFColor.GoldGradient)
-                                .clickable { onMovieClick(movie.slug) }
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                tint = Color(0xFF07080A),
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Xem Ngay",
-                                style = DFTypography.headline.copy(color = Color(0xFF07080A), fontSize = 12.5.sp)
-                            )
-                        }
-
-                        // Chi Tiết Button
-                        Row(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.14f))
-                                .border(width = 0.8.dp, color = Color.White.copy(alpha = 0.2f), shape = CircleShape)
-                                .clickable { onMovieClick(movie.slug) }
-                                .padding(horizontal = 14.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Chi Tiết",
-                                style = DFTypography.callout.copy(color = Color.White, fontSize = 12.sp)
-                            )
-                        }
-                    }
+                        .clickable { onMovieClick(movie.slug) }
+                ) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(movie.bestPoster)
+                            .crossfade(200)
+                            .scale(Scale.FILL)
+                            .build(),
+                        contentDescription = movie.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 4. Movie Info & Primary Actions
+            MovieHeroInfoSection(
+                movie = currentMovie,
+                pageCount = heroList.size,
+                selectedIndex = pagerState.currentPage,
+                onMovieClick = onMovieClick
+            )
+        }
+    }
+}
+
+@Composable
+private fun CategoryPillsRow(
+    activeFilter: CatalogFilter,
+    onFilterSelected: (CatalogFilter) -> Unit,
+    onOpenFilterDialog: () -> Unit
+) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // "Đề xuất"
+        item {
+            val isRecommended = activeFilter.isEmpty
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(if (isRecommended) Color.White else Color.White.copy(alpha = 0.12f))
+                    .border(
+                        width = 0.8.dp,
+                        color = if (isRecommended) Color.White else Color.White.copy(alpha = 0.18f),
+                        shape = CircleShape
+                    )
+                    .clickable {
+                        onFilterSelected(CatalogFilter())
+                    }
+                    .padding(horizontal = 16.dp, vertical = 7.dp)
+            ) {
+                Text(
+                    text = "Đề xuất",
+                    style = DFTypography.caption.copy(
+                        color = if (isRecommended) Color(0xFF07080A) else Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        // "Phim bộ"
+        item {
+            val isSeries = activeFilter.slug == "phim-bo"
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(if (isSeries) Color.White else Color.White.copy(alpha = 0.12f))
+                    .border(
+                        width = 0.8.dp,
+                        color = if (isSeries) Color.White else Color.White.copy(alpha = 0.18f),
+                        shape = CircleShape
+                    )
+                    .clickable {
+                        onFilterSelected(CatalogFilter(CatalogFilterKind.TYPE, "phim-bo", "Phim Bộ"))
+                    }
+                    .padding(horizontal = 14.dp, vertical = 7.dp)
+            ) {
+                Text(
+                    text = "Phim bộ",
+                    style = DFTypography.caption.copy(
+                        color = if (isSeries) Color(0xFF07080A) else Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+            }
+        }
 
-        // Animated Page Indicators
+        // "Phim lẻ"
+        item {
+            val isSingle = activeFilter.slug == "phim-le"
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(if (isSingle) Color.White else Color.White.copy(alpha = 0.12f))
+                    .border(
+                        width = 0.8.dp,
+                        color = if (isSingle) Color.White else Color.White.copy(alpha = 0.18f),
+                        shape = CircleShape
+                    )
+                    .clickable {
+                        onFilterSelected(CatalogFilter(CatalogFilterKind.TYPE, "phim-le", "Phim Lẻ"))
+                    }
+                    .padding(horizontal = 14.dp, vertical = 7.dp)
+            ) {
+                Text(
+                    text = "Phim lẻ",
+                    style = DFTypography.caption.copy(
+                        color = if (isSingle) Color(0xFF07080A) else Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+            }
+        }
+
+        // "Thể loại ▾"
+        item {
+            val isGenre = activeFilter.kind == CatalogFilterKind.GENRE
+            Row(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(if (isGenre) Color.White else Color.White.copy(alpha = 0.12f))
+                    .border(
+                        width = 0.8.dp,
+                        color = if (isGenre) Color.White else Color.White.copy(alpha = 0.18f),
+                        shape = CircleShape
+                    )
+                    .clickable { onOpenFilterDialog() }
+                    .padding(horizontal = 14.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = if (isGenre && activeFilter.label.isNotEmpty()) activeFilter.label else "Thể loại",
+                    style = DFTypography.caption.copy(
+                        color = if (isGenre) Color(0xFF07080A) else Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = if (isGenre) Color(0xFF07080A) else Color.White,
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MovieHeroInfoSection(
+    movie: Movie,
+    pageCount: Int,
+    selectedIndex: Int,
+    onMovieClick: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        // Title & Origin Name
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Text(
+                text = movie.name,
+                style = DFTypography.largeTitle.copy(
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.5.sp
+                ),
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            if (movie.originName.isNotEmpty()) {
+                Text(
+                    text = movie.originName,
+                    style = DFTypography.caption.copy(color = DFColor.TextMuted, fontSize = 12.sp),
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        // Action Buttons: "Xem Phim" & "Thông tin"
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            repeat(minOf(movies.size, 5)) { idx ->
-                val isCurrent = pagerState.currentPage == idx
+            // Xem Phim Button
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(DFColor.GoldGradient)
+                    .clickable { onMovieClick(movie.slug) },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = Color(0xFF07080A),
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Xem Phim",
+                    style = DFTypography.headline.copy(
+                        color = Color(0xFF07080A),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.5.sp
+                    )
+                )
+            }
+
+            // Thông tin Button
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White.copy(alpha = 0.14f))
+                    .border(
+                        width = 0.8.dp,
+                        color = Color.White.copy(alpha = 0.20f),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .clickable { onMovieClick(movie.slug) },
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "Thông tin",
+                    style = DFTypography.headline.copy(
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.5.sp
+                    )
+                )
+            }
+        }
+
+        // Badges Row: Score, Quality, Year, Episode
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Rating badge (Gold border pill)
+            val score = movie.formattedScore
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(DFColor.Gold.copy(alpha = 0.15f))
+                    .border(0.8.dp, DFColor.Gold.copy(alpha = 0.5f), CircleShape)
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = "${score.first} ${score.second}",
+                    style = DFTypography.caption.copy(
+                        color = DFColor.Gold,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.5.sp
+                    )
+                )
+            }
+
+            // Quality Badge (Solid gold)
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(DFColor.Gold)
+                    .padding(horizontal = 6.dp, vertical = 2.5.dp)
+            ) {
+                Text(
+                    text = movie.cleanQuality,
+                    style = DFTypography.small.copy(
+                        color = Color(0xFF07080A),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 10.sp
+                    )
+                )
+            }
+
+            // Year Badge
+            if (movie.yearString.isNotEmpty()) {
                 Box(
                     modifier = Modifier
-                        .padding(horizontal = 3.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color.White.copy(alpha = 0.12f))
+                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = movie.yearString,
+                        style = DFTypography.caption.copy(
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.5.sp
+                        )
+                    )
+                }
+            }
+
+            // Episode Badge
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color.White.copy(alpha = 0.12f))
+                    .padding(horizontal = 7.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = movie.episodeBadge,
+                    style = DFTypography.caption.copy(
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.5.sp
+                    )
+                )
+            }
+        }
+
+        // Genre Line
+        Text(
+            text = movie.categoryString,
+            style = DFTypography.caption.copy(
+                color = DFColor.GoldDim,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 11.5.sp
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        // Pagination Dots
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(minOf(pageCount, 8)) { idx ->
+                val isSelected = selectedIndex == idx
+                Box(
+                    modifier = Modifier
                         .height(4.dp)
-                        .width(if (isCurrent) 16.dp else 4.dp)
+                        .width(if (isSelected) 22.dp else 5.dp)
                         .clip(CircleShape)
-                        .background(if (isCurrent) DFColor.Gold else Color.White.copy(alpha = 0.25f))
+                        .background(if (isSelected) DFColor.Gold else Color.White.copy(alpha = 0.25f))
                 )
             }
         }

@@ -5,13 +5,15 @@ import com.dragonfilm.app.data.model.AniListNormalized
 import com.dragonfilm.app.data.model.Comment
 import com.dragonfilm.app.data.model.Episode
 import com.dragonfilm.app.data.model.EpisodeServer
+import com.dragonfilm.app.data.model.Genre
 import com.dragonfilm.app.data.model.HomeResponse
 import com.dragonfilm.app.data.model.Movie
 import com.dragonfilm.app.data.model.NetflixItem
+import com.dragonfilm.app.data.model.PersonRef
+import com.dragonfilm.app.data.model.TMDBInfo
 import com.dragonfilm.app.data.model.TMDBWeeklyItem
 import com.dragonfilm.app.util.SourceNormalizer
 import com.dragonfilm.app.util.SourceServer
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -39,7 +41,6 @@ data class CatalogResult(
 class MovieRepository {
 
     private val api = ApiClient.service
-    private val gson = ApiClient.gson
 
     // In-memory caches for instant 0ms tab switching
     private var cachedHome: HomeResponse? = null
@@ -436,39 +437,32 @@ class MovieRepository {
 
     private fun parseCatalog(jsonStr: String, defaultPage: Int, server: SourceServer): CatalogResult {
         if (!jsonStr.startsWith("{")) return CatalogResult(emptyList(), 1, defaultPage)
-        val root = JSONObject(jsonStr)
-        val dataObj = root.optJSONObject("data")
-        val itemsArray = dataObj?.optJSONArray("items")
-            ?: root.optJSONArray("items")
-            ?: root.optJSONArray("movies")
-            ?: dataObj?.optJSONArray("movies")
+        try {
+            val root = JSONObject(jsonStr)
+            val dataObj = root.optJSONObject("data")
+            val itemsArray = dataObj?.optJSONArray("items")
+                ?: root.optJSONArray("items")
+                ?: root.optJSONArray("movies")
+                ?: dataObj?.optJSONArray("movies")
 
-        val rawMovies: List<Movie> = if (itemsArray != null) {
-            gson.fromJson(itemsArray.toString(), object : TypeToken<List<Movie>>() {}.type) ?: emptyList()
-        } else {
-            emptyList()
-        }
-
-        // Normalize image paths if needed
-        val normalized = rawMovies.map { m ->
-            var poster = m.posterUrl
-            var thumb = m.thumbUrl
-            if (poster.isNotEmpty() && !poster.startsWith("http")) {
-                poster = resolveImageUrl(poster, server)
+            val movies = mutableListOf<Movie>()
+            if (itemsArray != null) {
+                for (i in 0 until itemsArray.length()) {
+                    val itemObj = itemsArray.optJSONObject(i) ?: continue
+                    movies.add(parseMovieObject(itemObj, server))
+                }
             }
-            if (thumb.isNotEmpty() && !thumb.startsWith("http")) {
-                thumb = resolveImageUrl(thumb, server)
-            }
-            m.copy(posterUrl = poster, thumbUrl = thumb, server = server.rawValue)
+
+            val pagination = dataObj?.optJSONObject("params")?.optJSONObject("pagination")
+                ?: root.optJSONObject("paginate")
+            val totalPages = pagination?.optInt("totalPages", 1)
+                ?: pagination?.optInt("total_page", 1)
+                ?: root.optInt("totalPages", 1)
+
+            return CatalogResult(movies, totalPages, defaultPage)
+        } catch (_: Exception) {
+            return CatalogResult(emptyList(), 1, defaultPage)
         }
-
-        val pagination = dataObj?.optJSONObject("params")?.optJSONObject("pagination")
-            ?: root.optJSONObject("paginate")
-        val totalPages = pagination?.optInt("totalPages", 1)
-            ?: pagination?.optInt("total_page", 1)
-            ?: root.optInt("totalPages", 1)
-
-        return CatalogResult(normalized, totalPages, defaultPage)
     }
 
     private fun parseMovieDetailResponse(jsonStr: String, server: SourceServer): MovieDetailResult? {
@@ -481,19 +475,9 @@ class MovieRepository {
                 ?: root.optJSONObject("item")
                 ?: return null
 
-            val rawMovie: Movie = gson.fromJson(movieObj.toString(), Movie::class.java) ?: return null
+            val movie = parseMovieObject(movieObj, server)
             val desc = movieObj.optString("content", "")
                 .ifEmpty { movieObj.optString("description", "") }
-
-            var poster = rawMovie.posterUrl
-            var thumb = rawMovie.thumbUrl
-            if (poster.isNotEmpty() && !poster.startsWith("http")) {
-                poster = resolveImageUrl(poster, server)
-            }
-            if (thumb.isNotEmpty() && !thumb.startsWith("http")) {
-                thumb = resolveImageUrl(thumb, server)
-            }
-            val movie = rawMovie.copy(posterUrl = poster, thumbUrl = thumb, server = server.rawValue)
 
             val epServers = mutableListOf<EpisodeServer>()
             val epArray = root.optJSONArray("episodes")
@@ -552,6 +536,158 @@ class MovieRepository {
         } catch (_: Exception) {
             return null
         }
+    }
+
+    private fun parseMovieObject(obj: JSONObject, server: SourceServer?): Movie {
+        val slug = obj.optString("slug", "")
+        val name = obj.optString("name", "").ifEmpty { obj.optString("title", slug) }
+        val originName = obj.optString("origin_name", "").ifEmpty { obj.optString("original_name", "") }
+        var thumb = obj.optString("thumb_url", "").ifEmpty { obj.optString("thumb", "") }
+        var poster = obj.optString("poster_url", "").ifEmpty { obj.optString("poster", "") }
+        val yearRaw = obj.opt("year")
+        val type = obj.optString("type", "single")
+        val episodeCurrent = obj.optString("episode_current", "").ifEmpty { obj.optString("current_episode", "") }
+        val quality = obj.optString("quality", "").takeIf { it.isNotEmpty() }
+        val lang = obj.optString("lang", "").ifEmpty { obj.optString("language", "") }.takeIf { it.isNotEmpty() }
+
+        // Categories / Genres
+        val categories = mutableListOf<Genre>()
+        val catVal = obj.opt("category") ?: obj.opt("genres") ?: obj.opt("the_loai")
+        if (catVal is JSONArray) {
+            for (i in 0 until catVal.length()) {
+                val item = catVal.opt(i)
+                if (item is JSONObject) {
+                    categories.add(Genre(name = item.optString("name", ""), slug = item.optString("slug", "")))
+                } else if (item is String && item.isNotBlank()) {
+                    categories.add(Genre(name = item.trim(), slug = item.trim().lowercase()))
+                }
+            }
+        } else if (catVal is String && catVal.isNotBlank()) {
+            catVal.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach {
+                categories.add(Genre(name = it, slug = it.lowercase()))
+            }
+        }
+
+        // Countries
+        val countries = mutableListOf<Genre>()
+        val countryVal = obj.opt("country") ?: obj.opt("quoc_gia")
+        if (countryVal is JSONArray) {
+            for (i in 0 until countryVal.length()) {
+                val item = countryVal.opt(i)
+                if (item is JSONObject) {
+                    countries.add(Genre(name = item.optString("name", ""), slug = item.optString("slug", "")))
+                } else if (item is String && item.isNotBlank()) {
+                    countries.add(Genre(name = item.trim(), slug = item.trim().lowercase()))
+                }
+            }
+        } else if (countryVal is String && countryVal.isNotBlank()) {
+            countryVal.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach {
+                countries.add(Genre(name = it, slug = it.lowercase()))
+            }
+        }
+
+        // Actors
+        val actors = mutableListOf<PersonRef>()
+        val actorVal = obj.opt("actor") ?: obj.opt("actors") ?: obj.opt("dien_vien")
+        if (actorVal is JSONArray) {
+            for (i in 0 until actorVal.length()) {
+                val item = actorVal.opt(i)
+                if (item is JSONObject) {
+                    actors.add(PersonRef(
+                        name = item.optString("name", ""),
+                        character = item.optString("character", ""),
+                        profileUrl = item.optString("profile_url", "").ifEmpty { item.optString("profile_path", "") }
+                    ))
+                } else if (item is String && item.isNotBlank()) {
+                    actors.add(PersonRef(name = item.trim()))
+                }
+            }
+        } else if (actorVal is String && actorVal.isNotBlank()) {
+            actorVal.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach {
+                actors.add(PersonRef(name = it))
+            }
+        }
+
+        // Directors
+        val directors = mutableListOf<PersonRef>()
+        val directorVal = obj.opt("director") ?: obj.opt("directors") ?: obj.opt("dao_dien")
+        if (directorVal is JSONArray) {
+            for (i in 0 until directorVal.length()) {
+                val item = directorVal.opt(i)
+                if (item is JSONObject) {
+                    directors.add(PersonRef(
+                        name = item.optString("name", ""),
+                        character = item.optString("character", ""),
+                        profileUrl = item.optString("profile_url", "").ifEmpty { item.optString("profile_path", "") }
+                    ))
+                } else if (item is String && item.isNotBlank()) {
+                    directors.add(PersonRef(name = item.trim()))
+                }
+            }
+        } else if (directorVal is String && directorVal.isNotBlank()) {
+            directorVal.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach {
+                directors.add(PersonRef(name = it))
+            }
+        }
+
+        // TMDB
+        val tmdbObj = obj.optJSONObject("tmdb")
+        val tmdb = if (tmdbObj != null) {
+            TMDBInfo(
+                id = tmdbObj.opt("id"),
+                type = tmdbObj.optString("type").takeIf { it.isNotEmpty() },
+                season = tmdbObj.opt("season"),
+                voteAverage = tmdbObj.opt("vote_average") ?: tmdbObj.opt("voteAverage"),
+                voteCount = tmdbObj.opt("vote_count") ?: tmdbObj.opt("voteCount"),
+                posterUrl = tmdbObj.optString("poster_url").ifEmpty { tmdbObj.optString("poster_path") }.takeIf { it.isNotEmpty() },
+                backdropUrl = tmdbObj.optString("backdrop_url").ifEmpty { tmdbObj.optString("backdrop_path") }.takeIf { it.isNotEmpty() },
+                thumbUrl = tmdbObj.optString("thumb_url").takeIf { it.isNotEmpty() }
+            )
+        } else null
+
+        // IMDB
+        val imdbObj = obj.optJSONObject("imdb")
+        val imdb = if (imdbObj != null) {
+            TMDBInfo(
+                id = imdbObj.opt("id"),
+                type = imdbObj.optString("type").takeIf { it.isNotEmpty() },
+                season = null,
+                voteAverage = imdbObj.opt("vote_average") ?: imdbObj.opt("voteAverage") ?: imdbObj.opt("rate"),
+                voteCount = imdbObj.opt("vote_count") ?: imdbObj.opt("voteCount") ?: imdbObj.opt("votes"),
+                posterUrl = null,
+                backdropUrl = null,
+                thumbUrl = null
+            )
+        } else null
+
+        if (server != null) {
+            if (poster.isNotEmpty() && !poster.startsWith("http")) {
+                poster = resolveImageUrl(poster, server)
+            }
+            if (thumb.isNotEmpty() && !thumb.startsWith("http")) {
+                thumb = resolveImageUrl(thumb, server)
+            }
+        }
+
+        return Movie(
+            slug = slug,
+            name = name,
+            originName = originName,
+            thumbUrl = thumb,
+            posterUrl = poster,
+            yearRaw = yearRaw,
+            type = type,
+            episodeCurrent = episodeCurrent,
+            quality = quality,
+            lang = lang,
+            category = categories,
+            country = countries,
+            actor = actors.takeIf { it.isNotEmpty() },
+            director = directors.takeIf { it.isNotEmpty() },
+            tmdb = tmdb,
+            imdb = imdb,
+            server = server?.rawValue
+        )
     }
 
     private fun resolveImageUrl(path: String, server: SourceServer): String {

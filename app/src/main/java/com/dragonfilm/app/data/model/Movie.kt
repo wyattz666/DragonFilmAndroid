@@ -9,13 +9,13 @@ data class Movie(
     @SerializedName("name")
     val name: String = "",
 
-    @SerializedName("origin_name")
+    @SerializedName("origin_name", alternate = ["original_name"])
     val originName: String = "",
 
-    @SerializedName("thumb_url")
+    @SerializedName("thumb_url", alternate = ["thumb"])
     val thumbUrl: String = "",
 
-    @SerializedName("poster_url")
+    @SerializedName("poster_url", alternate = ["poster"])
     val posterUrl: String = "",
 
     @SerializedName("year")
@@ -24,25 +24,25 @@ data class Movie(
     @SerializedName("type")
     val type: String = "single",
 
-    @SerializedName("episode_current")
+    @SerializedName("episode_current", alternate = ["current_episode"])
     val episodeCurrent: String = "",
 
     @SerializedName("quality")
     val quality: String? = null,
 
-    @SerializedName("lang")
+    @SerializedName("lang", alternate = ["language"])
     val lang: String? = null,
 
-    @SerializedName("category")
+    @SerializedName("category", alternate = ["genres", "the_loai"])
     val category: List<Genre> = emptyList(),
 
-    @SerializedName("country")
+    @SerializedName("country", alternate = ["quoc_gia"])
     val country: List<Genre> = emptyList(),
 
-    @SerializedName("actor")
+    @SerializedName("actor", alternate = ["actors", "dien_vien"])
     val actor: List<PersonRef>? = null,
 
-    @SerializedName("director")
+    @SerializedName("director", alternate = ["directors", "dao_dien"])
     val director: List<PersonRef>? = null,
 
     @SerializedName("tmdb")
@@ -162,10 +162,10 @@ data class Episode(
     @SerializedName("filename")
     val filename: String? = null,
 
-    @SerializedName("link_m3u8")
+    @SerializedName("link_m3u8", alternate = ["m3u8"])
     val linkM3U8: String? = null,
 
-    @SerializedName("link_embed")
+    @SerializedName("link_embed", alternate = ["embed", "link"])
     val linkEmbed: String? = null
 )
 
@@ -190,11 +190,32 @@ data class HomeRow(
     @SerializedName("title")
     val title: String = "",
 
+    @SerializedName("fetchKind")
+    val fetchKind: String = "",
+
+    @SerializedName("filterKind")
+    val filterKind: String = "",
+
+    @SerializedName("slug")
+    val slug: String = "",
+
+    @SerializedName("excludeAnimation")
+    val excludeAnimation: Boolean = false,
+
     @SerializedName("items")
     val items: List<Movie> = emptyList()
 )
 
 data class HomeResponse(
+    @SerializedName("ok")
+    val ok: Boolean = false,
+
+    @SerializedName("version")
+    val version: String = "",
+
+    @SerializedName("generatedAt")
+    val generatedAt: String = "",
+
     @SerializedName("rows")
     val rows: List<HomeRow> = emptyList()
 )

@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -61,6 +62,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.dragonfilm.app.R
 import com.dragonfilm.app.data.model.User
 import com.dragonfilm.app.data.storage.AuthManager
 import com.dragonfilm.app.data.storage.CloudSync
@@ -326,21 +328,11 @@ private fun VersionInfoDialog(onDismiss: () -> Unit) {
                     }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(DFColor.Bg3)
-                        .border(1.5.dp, DFColor.GlassBorderGradient, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = DFColor.Gold,
-                        modifier = Modifier.size(36.dp)
-                    )
-                }
+                Image(
+                    painter = painterResource(id = R.drawable.logo),
+                    contentDescription = "DragonFilm Logo",
+                    modifier = Modifier.size(68.dp)
+                )
 
                 Spacer(modifier = Modifier.height(14.dp))
 

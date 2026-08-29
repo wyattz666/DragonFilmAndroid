@@ -4,9 +4,12 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.res.painterResource
+import com.dragonfilm.app.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -482,12 +485,17 @@ private fun TopStickyHeader(onSearchClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            Image(
+                painter = painterResource(id = R.drawable.logo),
+                contentDescription = "DragonFilm Logo",
+                modifier = Modifier.size(32.dp)
+            )
             Text(
                 text = "DRAGONFILM",
                 style = DFTypography.largeTitle.copy(
                     brush = DFColor.GoldGradient,
-                    fontSize = 20.sp,
-                    letterSpacing = 1.4.sp
+                    fontSize = 19.sp,
+                    letterSpacing = 1.2.sp
                 )
             )
             Badge(

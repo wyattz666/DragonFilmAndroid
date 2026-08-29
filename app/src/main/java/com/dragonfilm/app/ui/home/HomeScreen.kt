@@ -109,7 +109,6 @@ fun HomeScreen(
     onSearchClick: () -> Unit
 ) {
     var homeRows by remember { mutableStateOf<List<HomeRow>>(emptyList()) }
-    var heroMovies by remember { mutableStateOf<List<Movie>>(emptyList()) }
     var isLoadingHome by remember { mutableStateOf(true) }
 
     var netflixItems by remember { mutableStateOf<List<NetflixItem>>(emptyList()) }
@@ -155,7 +154,6 @@ fun HomeScreen(
                 try {
                     val res = repository.getHome()
                     homeRows = res.rows
-                    heroMovies = res.rows.firstOrNull()?.items?.take(5) ?: emptyList()
                 } catch (_: Exception) {}
                 isLoadingHome = false
             }
@@ -189,29 +187,18 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 90.dp)
         ) {
-            // Hero Section
+            // Category Navigation Filter Chips
             item {
-                if (isLoadingHome && heroMovies.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(520.dp)
-                            .padding(horizontal = 16.dp)
-                            .clip(RoundedCornerShape(DFRadius.xl))
-                            .shimmer()
-                    )
-                } else if (heroMovies.isNotEmpty()) {
-                    HeroSection(
-                        movies = heroMovies,
-                        activeFilter = activeFilter,
-                        onFilterSelected = { filter ->
-                            activeFilter = filter
-                            loadLatest(1, filter, true)
-                        },
-                        onOpenFilterDialog = { showFilterDialog = true },
-                        onMovieClick = onMovieClick
-                    )
-                }
+                Spacer(modifier = Modifier.height(10.dp))
+                CategoryPillsRow(
+                    activeFilter = activeFilter,
+                    onFilterSelected = { filter ->
+                        activeFilter = filter
+                        loadLatest(1, filter, true)
+                    },
+                    onOpenFilterDialog = { showFilterDialog = true }
+                )
+                Spacer(modifier = Modifier.height(6.dp))
             }
 
             // Continue Watching Row
@@ -534,169 +521,7 @@ private fun TopStickyHeader(onSearchClick: () -> Unit) {
     }
 }
 
-// MARK: - iOS-Identical 3D CoverFlow Cinema Hero
-
-private val Movie.cleanQuality: String
-    get() = quality?.takeIf { it.isNotBlank() } ?: "HD"
-
-private val Movie.episodeBadge: String
-    get() = if (episodeCurrent.isNotBlank()) episodeCurrent else if (isSeries) "Đang Cập Nhật" else "Bản Đẹp"
-
-private val Movie.categoryString: String
-    get() {
-        val names = category.map { it.name }.filter { it.isNotBlank() }
-        return if (names.isEmpty()) "Phim Điện Ảnh" else names.take(3).joinToString(", ")
-    }
-
-private val Movie.formattedScore: Pair<String, String>
-    get() {
-        if (imdb != null && imdb.scoreString != "N/A") {
-            return Pair("IMDb", imdb.scoreString)
-        }
-        if (tmdb != null && tmdb.scoreString != "N/A") {
-            return Pair("TMDB", tmdb.scoreString)
-        }
-        return Pair("Đánh giá", "8.9")
-    }
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun HeroSection(
-    movies: List<Movie>,
-    activeFilter: CatalogFilter,
-    onFilterSelected: (CatalogFilter) -> Unit,
-    onOpenFilterDialog: () -> Unit,
-    onMovieClick: (String) -> Unit
-) {
-    val heroList = remember(movies) { movies.take(8) }
-    if (heroList.isEmpty()) return
-
-    val pagerState = rememberPagerState(pageCount = { heroList.size })
-    val currentMovie = heroList.getOrNull(pagerState.currentPage) ?: heroList.first()
-
-    LaunchedEffect(pagerState) {
-        while (true) {
-            delay(5000)
-            if (heroList.isNotEmpty()) {
-                val next = (pagerState.currentPage + 1) % heroList.size
-                pagerState.animateScrollToPage(next)
-            }
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 12.dp)
-    ) {
-        // 1. Immersive Ambient Blurred Backdrop
-        AsyncImage(
-            model = ImageRequest.Builder(LocalContext.current)
-                .data(currentMovie.bestPoster)
-                .crossfade(300)
-                .build(),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(540.dp)
-                .blur(45.dp)
-                .alpha(0.38f)
-        )
-
-        // Multi-stop gradient fading to pure OLED black background
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(540.dp)
-                .background(
-                    Brush.verticalGradient(
-                        0.0f to DFColor.Bg.copy(alpha = 0.4f),
-                        0.25f to Color.Transparent,
-                        0.65f to DFColor.Bg.copy(alpha = 0.75f),
-                        0.90f to DFColor.Bg.copy(alpha = 0.95f),
-                        1.0f to DFColor.Bg
-                    )
-                )
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // 2. Category Navigation Filter Chips
-            CategoryPillsRow(
-                activeFilter = activeFilter,
-                onFilterSelected = onFilterSelected,
-                onOpenFilterDialog = onOpenFilterDialog
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // 3. 3D CoverFlow Card Carousel
-            HorizontalPager(
-                state = pagerState,
-                contentPadding = PaddingValues(horizontal = 76.dp),
-                pageSpacing = 16.dp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(320.dp)
-            ) { page ->
-                val movie = heroList[page]
-                val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction).absoluteValue
-                val cardScale = lerp(0.86f, 1f, 1f - pageOffset.coerceIn(0f, 1f))
-                val cardAlpha = lerp(0.55f, 1f, 1f - pageOffset.coerceIn(0f, 1f))
-                val isSelected = pagerState.currentPage == page
-
-                Box(
-                    modifier = Modifier
-                        .graphicsLayer {
-                            scaleX = cardScale
-                            scaleY = cardScale
-                            this.alpha = cardAlpha
-                            cameraDistance = 12f * density
-                            rotationY = if (page < pagerState.currentPage) 10f * pageOffset.coerceIn(0f, 1f)
-                                        else if (page > pagerState.currentPage) -10f * pageOffset.coerceIn(0f, 1f)
-                                        else 0f
-                        }
-                        .width(220.dp)
-                        .height(310.dp)
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(DFColor.Bg3)
-                        .border(
-                            width = if (isSelected) 1.2.dp else 0.6.dp,
-                            color = if (isSelected) Color.White.copy(alpha = 0.35f) else Color.White.copy(alpha = 0.10f),
-                            shape = RoundedCornerShape(18.dp)
-                        )
-                        .clickable { onMovieClick(movie.slug) }
-                ) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(movie.bestPoster)
-                            .crossfade(200)
-                            .scale(Scale.FILL)
-                            .build(),
-                        contentDescription = movie.name,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // 4. Movie Info & Primary Actions
-            MovieHeroInfoSection(
-                movie = currentMovie,
-                pageCount = heroList.size,
-                selectedIndex = pagerState.currentPage,
-                onMovieClick = onMovieClick
-            )
-        }
-    }
-}
+// MARK: - Category Navigation Filter Chips
 
 @Composable
 private fun CategoryPillsRow(
@@ -818,225 +643,6 @@ private fun CategoryPillsRow(
                     contentDescription = null,
                     tint = if (isGenre) Color(0xFF07080A) else Color.White,
                     modifier = Modifier.size(14.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun MovieHeroInfoSection(
-    movie: Movie,
-    pageCount: Int,
-    selectedIndex: Int,
-    onMovieClick: (String) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        // Title & Origin Name
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(3.dp)
-        ) {
-            Text(
-                text = movie.name,
-                style = DFTypography.largeTitle.copy(
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 0.5.sp
-                ),
-                color = Color.White,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            if (movie.originName.isNotEmpty()) {
-                Text(
-                    text = movie.originName,
-                    style = DFTypography.caption.copy(color = DFColor.TextMuted, fontSize = 12.sp),
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-
-        // Action Buttons: "Xem Phim" & "Thông tin"
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Xem Phim Button
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(44.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(DFColor.GoldGradient)
-                    .clickable { onMovieClick(movie.slug) },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    tint = Color(0xFF07080A),
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Xem Phim",
-                    style = DFTypography.headline.copy(
-                        color = Color(0xFF07080A),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.5.sp
-                    )
-                )
-            }
-
-            // Thông tin Button
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(44.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.White.copy(alpha = 0.14f))
-                    .border(
-                        width = 0.8.dp,
-                        color = Color.White.copy(alpha = 0.20f),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .clickable { onMovieClick(movie.slug) },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Info,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "Thông tin",
-                    style = DFTypography.headline.copy(
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.5.sp
-                    )
-                )
-            }
-        }
-
-        // Badges Row: Score, Quality, Year, Episode
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Rating badge (Gold border pill)
-            val score = movie.formattedScore
-            Box(
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .background(DFColor.Gold.copy(alpha = 0.15f))
-                    .border(0.8.dp, DFColor.Gold.copy(alpha = 0.5f), CircleShape)
-                    .padding(horizontal = 8.dp, vertical = 3.dp)
-            ) {
-                Text(
-                    text = "${score.first} ${score.second}",
-                    style = DFTypography.caption.copy(
-                        color = DFColor.Gold,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 10.5.sp
-                    )
-                )
-            }
-
-            // Quality Badge (Solid gold)
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(DFColor.Gold)
-                    .padding(horizontal = 6.dp, vertical = 2.5.dp)
-            ) {
-                Text(
-                    text = movie.cleanQuality,
-                    style = DFTypography.small.copy(
-                        color = Color(0xFF07080A),
-                        fontWeight = FontWeight.Black,
-                        fontSize = 10.sp
-                    )
-                )
-            }
-
-            // Year Badge
-            if (movie.yearString.isNotEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(Color.White.copy(alpha = 0.12f))
-                        .padding(horizontal = 7.dp, vertical = 3.dp)
-                ) {
-                    Text(
-                        text = movie.yearString,
-                        style = DFTypography.caption.copy(
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 10.5.sp
-                        )
-                    )
-                }
-            }
-
-            // Episode Badge
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Color.White.copy(alpha = 0.12f))
-                    .padding(horizontal = 7.dp, vertical = 3.dp)
-            ) {
-                Text(
-                    text = movie.episodeBadge,
-                    style = DFTypography.caption.copy(
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 10.5.sp
-                    )
-                )
-            }
-        }
-
-        // Genre Line
-        Text(
-            text = movie.categoryString,
-            style = DFTypography.caption.copy(
-                color = DFColor.GoldDim,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 11.5.sp
-            ),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-
-        // Pagination Dots
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            repeat(minOf(pageCount, 8)) { idx ->
-                val isSelected = selectedIndex == idx
-                Box(
-                    modifier = Modifier
-                        .height(4.dp)
-                        .width(if (isSelected) 22.dp else 5.dp)
-                        .clip(CircleShape)
-                        .background(if (isSelected) DFColor.Gold else Color.White.copy(alpha = 0.25f))
                 )
             }
         }

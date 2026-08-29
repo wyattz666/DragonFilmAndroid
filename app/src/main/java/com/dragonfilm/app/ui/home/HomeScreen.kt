@@ -478,14 +478,24 @@ private fun TopStickyHeader(onSearchClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
-            text = "DRAGONFILM",
-            style = DFTypography.largeTitle.copy(
-                brush = DFColor.GoldGradient,
-                fontSize = 20.sp,
-                letterSpacing = 1.4.sp
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "DRAGONFILM",
+                style = DFTypography.largeTitle.copy(
+                    brush = DFColor.GoldGradient,
+                    fontSize = 20.sp,
+                    letterSpacing = 1.4.sp
+                )
             )
-        )
+            Badge(
+                text = "v1.0.1",
+                backgroundColor = DFColor.Gold.copy(alpha = 0.15f),
+                textColor = DFColor.Gold
+            )
+        }
 
         IconButton(
             onClick = onSearchClick,

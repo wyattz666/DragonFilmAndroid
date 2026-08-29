@@ -21,13 +21,19 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -52,6 +58,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.dragonfilm.app.data.model.User
@@ -131,6 +138,7 @@ fun ProfileScreen(
 ) {
     val currentUser by authManager.currentUser.collectAsState()
     var showAuthDialog by remember { mutableStateOf(false) }
+    var showVersionDialog by remember { mutableStateOf(false) }
     var syncMessage by remember { mutableStateOf<String?>(null) }
     var isSyncing by remember { mutableStateOf(false) }
 
@@ -180,7 +188,7 @@ fun ProfileScreen(
                     Spacer(modifier = Modifier.height(14.dp))
                 }
 
-                // Actions List
+                // Account Actions List
                 item {
                     Column(
                         modifier = Modifier
@@ -213,6 +221,7 @@ fun ProfileScreen(
                             }
                         )
                     }
+                    Spacer(modifier = Modifier.height(14.dp))
                 }
             } else {
                 // Guest Card
@@ -220,10 +229,36 @@ fun ProfileScreen(
                     GuestCard(
                         onLoginClick = { showAuthDialog = true }
                     )
+                    Spacer(modifier = Modifier.height(14.dp))
                 }
             }
 
-            // App Info Section
+            // App Settings & Version Card
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .glassCard(cornerRadius = DFRadius.lg)
+                ) {
+                    ActionRowItem(
+                        icon = Icons.Default.Info,
+                        title = "Phiên bản ứng dụng",
+                        subtitle = "v1.0.1 (Build 2) • Bản mới nhất",
+                        trailingContent = {
+                            Badge(
+                                text = "v1.0.1",
+                                backgroundColor = DFColor.Gold.copy(alpha = 0.2f),
+                                textColor = DFColor.Gold
+                            )
+                        },
+                        onClick = {
+                            showVersionDialog = true
+                        }
+                    )
+                }
+            }
+
+            // App Info Footer
             item {
                 Spacer(modifier = Modifier.height(28.dp))
                 Column(
@@ -231,13 +266,13 @@ fun ProfileScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "DragonFilm for Android v1.0.1",
-                        style = DFTypography.caption.copy(color = DFColor.TextMuted, fontSize = 11.5.sp)
+                        text = "DragonFilm for Android v1.0.1 (Build 2)",
+                        style = DFTypography.caption.copy(color = DFColor.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                     )
                     Spacer(modifier = Modifier.height(3.dp))
                     Text(
-                        text = "Phát triển bởi DragonFilm Team",
-                        style = DFTypography.small.copy(color = DFColor.TextMuted, fontSize = 10.sp)
+                        text = "Hệ thống xem phim Cinema • Kotlin & Jetpack Compose",
+                        style = DFTypography.small.copy(color = DFColor.TextDim, fontSize = 10.5.sp)
                     )
                 }
             }
@@ -254,6 +289,103 @@ fun ProfileScreen(
                 }
             }
         )
+    }
+
+    if (showVersionDialog) {
+        VersionInfoDialog(onDismiss = { showVersionDialog = false })
+    }
+}
+
+@Composable
+private fun VersionInfoDialog(onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(DFSpacing.md)
+                .glassCard(cornerRadius = DFRadius.xl),
+            color = DFColor.CardBgSolid,
+            shape = RoundedCornerShape(DFRadius.xl)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(DFSpacing.xl),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Đóng",
+                            tint = DFColor.TextMuted
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(DFColor.Bg3)
+                        .border(1.5.dp, DFColor.GlassBorderGradient, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = DFColor.Gold,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Text(
+                    text = "DragonFilm Android",
+                    style = DFTypography.title,
+                    color = DFColor.Text
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Badge(
+                    text = "Phiên bản v1.0.1 (Build 2)",
+                    backgroundColor = DFColor.Gold.copy(alpha = 0.2f),
+                    textColor = DFColor.Gold
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Text(
+                    text = "Bạn đang sử dụng phiên bản chính thức mới nhất. Ứng dụng đã được tối ưu hóa toàn diện cho Android với Media3 ExoPlayer, Google OAuth 2.0 và Cloud Sync.",
+                    style = DFTypography.body.copy(fontSize = 12.5.sp),
+                    color = DFColor.TextDim,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(CircleShape)
+                        .background(DFColor.GoldGradient)
+                        .clickable { onDismiss() }
+                        .padding(vertical = 11.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Đã Hiểu",
+                        style = DFTypography.headline.copy(color = Color(0xFF07080A), fontSize = 13.5.sp)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -370,6 +502,7 @@ private fun ActionRowItem(
     subtitle: String? = null,
     titleColor: Color = DFColor.Text,
     iconColor: Color = DFColor.Gold,
+    trailingContent: (@Composable () -> Unit)? = null,
     onClick: () -> Unit
 ) {
     Row(
@@ -398,6 +531,10 @@ private fun ActionRowItem(
                     style = DFTypography.small.copy(color = DFColor.TextMuted, fontSize = 11.sp)
                 )
             }
+        }
+        if (trailingContent != null) {
+            trailingContent()
+            Spacer(modifier = Modifier.width(8.dp))
         }
         Icon(
             imageVector = Icons.AutoMirrored.Filled.ArrowForward,

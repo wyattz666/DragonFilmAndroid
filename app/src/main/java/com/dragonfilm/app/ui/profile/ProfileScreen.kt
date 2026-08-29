@@ -231,7 +231,7 @@ fun ProfileScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "DragonFilm for Android v1.0.0",
+                        text = "DragonFilm for Android v1.0.1",
                         style = DFTypography.caption.copy(color = DFColor.TextMuted, fontSize = 11.5.sp)
                     )
                     Spacer(modifier = Modifier.height(3.dp))

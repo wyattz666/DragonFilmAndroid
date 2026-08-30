@@ -10,7 +10,7 @@ object DeviceInfo {
     val brand: String = Build.BRAND ?: "Unknown"
     val osVersion: String = Build.VERSION.RELEASE ?: "Unknown"
     val sdkInt: Int = Build.VERSION.SDK_INT
-    const val appVersion: String = "1.0.2"
+    const val appVersion: String = "1.0.3"
 
     val deviceName: String
         get() = if (model.startsWith(manufacturer, ignoreCase = true)) {

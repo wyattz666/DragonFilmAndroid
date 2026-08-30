@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4.svg?style=flat&logo=jetpackcompose" alt="Jetpack Compose" />
   <img src="https://img.shields.io/badge/Media-Media3%20ExoPlayer-F5C518.svg?style=flat" alt="ExoPlayer" />
   <img src="https://img.shields.io/badge/Architecture-MVI%20%2F%20Coroutines%20%2F%20Flow-673AB7.svg?style=flat" alt="Architecture" />
-  <img src="https://img.shields.io/badge/Release-v1.0.2-F5C518.svg?style=flat" alt="Release" />
+  <img src="https://img.shields.io/badge/Release-v1.0.3-F5C518.svg?style=flat" alt="Release" />
   <img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat" alt="License" />
 </p>
 

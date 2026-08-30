@@ -245,10 +245,10 @@ fun ProfileScreen(
                     ActionRowItem(
                         icon = Icons.Default.Info,
                         title = "Phiên bản ứng dụng",
-                        subtitle = "v1.0.2 (Build 3) • Bản mới nhất",
+                        subtitle = "v1.0.3 (Build 4) • Bản mới nhất",
                         trailingContent = {
                             Badge(
-                                text = "v1.0.2",
+                                text = "v1.0.3",
                                 backgroundColor = DFColor.Gold.copy(alpha = 0.2f),
                                 textColor = DFColor.Gold
                             )
@@ -268,7 +268,7 @@ fun ProfileScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "DragonFilm for Android v1.0.2 (Build 3)",
+                        text = "DragonFilm for Android v1.0.3 (Build 4)",
                         style = DFTypography.caption.copy(color = DFColor.TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                     )
                     Spacer(modifier = Modifier.height(3.dp))
@@ -345,7 +345,7 @@ private fun VersionInfoDialog(onDismiss: () -> Unit) {
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Badge(
-                    text = "Phiên bản v1.0.2 (Build 3)",
+                    text = "Phiên bản v1.0.3 (Build 4)",
                     backgroundColor = DFColor.Gold.copy(alpha = 0.2f),
                     textColor = DFColor.Gold
                 )

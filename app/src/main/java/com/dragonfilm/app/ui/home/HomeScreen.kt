@@ -498,7 +498,7 @@ private fun TopStickyHeader(onSearchClick: () -> Unit) {
                 )
             )
             Badge(
-                text = "v1.0.2",
+                text = "v1.0.3",
                 backgroundColor = DFColor.Gold.copy(alpha = 0.15f),
                 textColor = DFColor.Gold
             )

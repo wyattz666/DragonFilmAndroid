@@ -23,7 +23,6 @@ import com.dragonfilm.app.ui.home.HomeScreen
 import com.dragonfilm.app.ui.library.LibraryScreen
 import com.dragonfilm.app.ui.player.PlayerScreen
 import com.dragonfilm.app.ui.profile.ProfileScreen
-import com.dragonfilm.app.ui.schedule.ScheduleScreen
 import com.dragonfilm.app.ui.search.SearchScreen
 import com.dragonfilm.app.ui.theme.DFColor
 import com.dragonfilm.app.util.SourceServer
@@ -117,11 +116,6 @@ fun AppNavigation(
                             localStore = localStore,
                             onMovieClick = { slug -> navigateTo(AppDestination.Detail(slug)) },
                             onSearchClick = { switchTab(NavScreen.SEARCH) }
-                        )
-
-                        NavScreen.SCHEDULE -> ScheduleScreen(
-                            repository = repository,
-                            onMovieClick = { slug -> navigateTo(AppDestination.Detail(slug)) }
                         )
 
                         NavScreen.SEARCH -> SearchScreen(

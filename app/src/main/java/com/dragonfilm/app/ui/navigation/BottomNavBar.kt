@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
@@ -38,7 +37,6 @@ import com.dragonfilm.app.ui.theme.DFTypography
 
 enum class NavScreen(val route: String, val title: String, val icon: ImageVector) {
     HOME("home", "Trang Chủ", Icons.Default.Home),
-    SCHEDULE("schedule", "Lịch Chiếu", Icons.Default.CalendarMonth),
     SEARCH("search", "Tìm Kiếm", Icons.Default.Search),
     LIBRARY("library", "Thư Viện", Icons.Default.VideoLibrary),
     PROFILE("profile", "Thành Viên", Icons.Default.Person)

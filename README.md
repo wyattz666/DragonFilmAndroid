@@ -38,8 +38,7 @@
 | **Flexible Authentication** | Secure user authentication supporting both native DragonFilm accounts and **Sign in with Google (Google OAuth)**. |
 | **Obsidian & Gold Aesthetics** | Cinema-grade dark theme featuring pure OLED deep black (`#07080A`), metallic gold gradients (`#F5C518`), and frosted glassmorphism overlays. |
 | **Live Trends & Rankings** | Real-time trending rankings curated from **Netflix Vietnam Top 10**, **TMDB Drama Weekly (KR & CN)**, and **AniList GraphQL Trending Anime (Weekly & Seasonal)**. |
-| **14-Day Release Calendar** | Interactive release schedule tracker for ongoing TV series and seasonal anime. |
-| **Instant Search Engine** | Fast, debounced search querying across multiple high-speed server clusters (Server 1, Server 2, Server 3, Server 4). |
+| **Instant Search Engine** | Fast, debounced search querying across multiple high-speed server clusters (Server 1, Server 3, Server 4). |
 | **Live Social Comments** | Real-time community discussion section for every movie and the homepage with 15s live polling. |
 
 ---
@@ -113,7 +112,6 @@ DragonFilmAndroid/
 │       │   │   ├── detail/       # Movie Details, Multi-Server Switcher, Version Tabs, Cast
 │       │   │   ├── player/       # Media3 ExoPlayer Controller, Custom Gestures & Fallback Embed
 │       │   │   ├── search/       # Instant Debounced Search & Recent History
-│       │   │   ├── schedule/     # 14-Day Calendar Release Tracker
 │       │   │   ├── library/      # Watch History, Liked, Watch Later & Favorite Actors
 │       │   │   ├── comments/     # Live Polling Comment Section & Composer
 │       │   │   └── profile/      # User Profile, Auth Dialog & Cloud Synchronization

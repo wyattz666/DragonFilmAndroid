@@ -68,6 +68,7 @@ import com.dragonfilm.app.data.storage.AuthManager
 import com.dragonfilm.app.data.storage.CloudSync
 import com.dragonfilm.app.data.storage.LocalStore
 import com.dragonfilm.app.ui.components.Badge
+import com.dragonfilm.app.ui.components.VipBadge
 import com.dragonfilm.app.ui.theme.DFColor
 import com.dragonfilm.app.ui.theme.DFRadius
 import com.dragonfilm.app.ui.theme.DFSpacing
@@ -414,9 +415,11 @@ private fun UserAccountCard(user: User) {
             )
         }
 
+        Spacer(modifier = Modifier.height(8.dp))
         if (user.isAdmin) {
-            Spacer(modifier = Modifier.height(6.dp))
-            Badge(text = "VIP ADMIN", backgroundColor = DFColor.Gold.copy(alpha = 0.25f), textColor = DFColor.Gold)
+            VipBadge(text = "VIP ADMIN")
+        } else {
+            VipBadge(text = "VIP MEMBER")
         }
     }
 }
@@ -442,7 +445,9 @@ private fun GuestCard(onLoginClick: () -> Unit) {
             style = DFTypography.title,
             color = DFColor.Text
         )
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
+        VipBadge(text = "VIP MEMBER")
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Đăng nhập để đồng bộ lịch sử xem và phim yêu thích trên mọi thiết bị.",
             style = DFTypography.body.copy(fontSize = 12.5.sp),

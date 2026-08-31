@@ -55,3 +55,24 @@ fun PillBadge(
         )
     }
 }
+
+@Composable
+fun VipBadge(
+    text: String = "VIP MEMBER",
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .background(brush = DFColor.GoldGradient, shape = RoundedCornerShape(5.dp))
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+    ) {
+        Text(
+            text = text,
+            style = DFTypography.small.copy(
+                color = Color(0xFF07080A),
+                fontSize = 9.5.sp,
+                letterSpacing = 0.5.sp
+            )
+        )
+    }
+}

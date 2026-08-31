@@ -85,6 +85,7 @@ import com.dragonfilm.app.data.storage.LocalStore
 import com.dragonfilm.app.ui.comments.CommentSectionView
 import com.dragonfilm.app.ui.components.AniListRankingRow
 import com.dragonfilm.app.ui.components.Badge
+import com.dragonfilm.app.ui.components.VipBadge
 import com.dragonfilm.app.ui.components.NetflixRankingRow
 import com.dragonfilm.app.ui.components.PosterCard
 import com.dragonfilm.app.ui.components.SectionHeader
@@ -497,11 +498,7 @@ private fun TopStickyHeader(onSearchClick: () -> Unit) {
                     letterSpacing = 1.2.sp
                 )
             )
-            Badge(
-                text = "v1.0.3",
-                backgroundColor = DFColor.Gold.copy(alpha = 0.15f),
-                textColor = DFColor.Gold
-            )
+            VipBadge(text = "VIP MEMBER")
         }
 
         IconButton(

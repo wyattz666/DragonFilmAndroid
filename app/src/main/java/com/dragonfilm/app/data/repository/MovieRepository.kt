@@ -235,16 +235,74 @@ class MovieRepository {
     suspend fun getTMDBWeekly(country: String, forceRefresh: Boolean = false): List<TMDBWeeklyItem> = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         val cached = tmdbCache[country]
-        if (!forceRefresh && cached != null && (now - cached.first) < 15 * 60 * 1000) {
+        if (!forceRefresh && cached != null && (now - cached.first) < 15 * 60 * 1000 && cached.second.size >= 8) {
             return@withContext cached.second
         }
+
+        val items = mutableListOf<TMDBWeeklyItem>()
+        val seenKeys = mutableSetOf<String>()
+
+        // 1. Try backend TMDB weekly endpoint
         try {
             val res = api.getTMDBWeekly(country)
-            tmdbCache[country] = Pair(now, res.items)
-            res.items
-        } catch (_: Exception) {
-            cached?.second ?: emptyList()
+            for (item in res.items) {
+                val key = (item.title.ifEmpty { item.originalTitle ?: "" }).trim().lowercase()
+                if (key.isNotEmpty() && !seenKeys.contains(key)) {
+                    seenKeys.add(key)
+                    items.add(item)
+                }
+            }
+        } catch (_: Exception) {}
+
+        // 2. If list has fewer than 10 items, supplement from country catalog (KR: han-quoc, CN: trung-quoc)
+        if (items.size < 10) {
+            try {
+                val slug = if (country.equals("KR", ignoreCase = true)) "han-quoc" else "trung-quoc"
+                val countryCatalog = getSourceList(
+                    server = SourceServer.KKPHIM,
+                    operation = "country",
+                    slug = slug,
+                    page = 1
+                )
+                for (movie in countryCatalog.movies) {
+                    val key = (movie.name.ifEmpty { movie.originName }).trim().lowercase()
+                    if (key.isNotEmpty() && !seenKeys.contains(key)) {
+                        seenKeys.add(key)
+                        val voteRaw = movie.tmdb?.voteAverage ?: movie.imdb?.voteAverage
+                        val voteAvg = when (voteRaw) {
+                            is Number -> voteRaw.toDouble()
+                            is String -> voteRaw.toDoubleOrNull()
+                            else -> null
+                        }
+                        items.add(
+                            TMDBWeeklyItem(
+                                rank = items.size + 1,
+                                tmdbId = movie.tmdb?.id,
+                                title = movie.name,
+                                originalTitle = movie.originName.ifEmpty { null },
+                                overview = null,
+                                posterUrl = movie.bestPoster,
+                                backdropUrl = movie.bestBanner,
+                                voteAverage = if (voteAvg != null && voteAvg > 0.0) voteAvg else 8.5,
+                                popularity = null,
+                                slug = movie.slug
+                            )
+                        )
+                    }
+                    if (items.size >= 10) break
+                }
+            } catch (_: Exception) {}
         }
+
+        // Re-index ranks 1..10
+        val ranked = items.take(10).mapIndexed { idx, item ->
+            item.copy(rank = idx + 1)
+        }
+
+        if (ranked.isNotEmpty()) {
+            tmdbCache[country] = Pair(now, ranked)
+        }
+        ranked
     }
 
     suspend fun getAniListWeeklyTrending(perPage: Int = 10): List<AniListNormalized> = getAniListTrendingWeekly(perPage)

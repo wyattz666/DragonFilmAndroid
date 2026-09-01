@@ -293,7 +293,7 @@ fun HomeScreen(
                         TMDBRankingRow(
                             item = item,
                             rank = item.rank,
-                            onClick = { onMovieClick(item.title) }
+                            onClick = { onMovieClick(item.slug?.takeIf { it.isNotEmpty() } ?: item.title) }
                         )
                     }
                 }
@@ -312,7 +312,7 @@ fun HomeScreen(
                         TMDBRankingRow(
                             item = item,
                             rank = item.rank,
-                            onClick = { onMovieClick(item.title) }
+                            onClick = { onMovieClick(item.slug?.takeIf { it.isNotEmpty() } ?: item.title) }
                         )
                     }
                 }

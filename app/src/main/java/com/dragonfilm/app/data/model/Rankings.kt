@@ -82,7 +82,10 @@ data class TMDBWeeklyItem(
     val voteAverage: Double? = null,
 
     @SerializedName("popularity")
-    val popularity: Double? = null
+    val popularity: Double? = null,
+
+    @SerializedName("slug")
+    val slug: String? = null
 )
 
 data class TMDBWeeklyResponse(

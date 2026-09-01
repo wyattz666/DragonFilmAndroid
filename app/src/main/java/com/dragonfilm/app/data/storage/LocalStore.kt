@@ -30,6 +30,9 @@ class LocalStore(private val context: Context) {
     private val _actorsFlow = MutableStateFlow<List<SavedActor>>(emptyList())
     val actorsFlow: StateFlow<List<SavedActor>> = _actorsFlow.asStateFlow()
 
+    private val _avatarFrameFlow = MutableStateFlow<String>("none")
+    val avatarFrameFlow: StateFlow<String> = _avatarFrameFlow.asStateFlow()
+
     init {
         refreshState()
     }
@@ -39,6 +42,7 @@ class LocalStore(private val context: Context) {
         _likedFlow.value = getLikedMovies()
         _watchLaterFlow.value = getWatchLater()
         _actorsFlow.value = getFavoriteActors()
+        _avatarFrameFlow.value = getAvatarFrame()
     }
 
     // MARK: - History
@@ -221,6 +225,17 @@ class LocalStore(private val context: Context) {
 
     fun clearRecentSearches() {
         save("recentSearches.json", emptyList<String>())
+    }
+
+    // MARK: - Avatar Frame
+
+    fun getAvatarFrame(): String {
+        return load("avatarFrame.json", object : TypeToken<String>() {}.type) ?: "none"
+    }
+
+    fun setAvatarFrame(frameId: String) {
+        save("avatarFrame.json", frameId)
+        _avatarFrameFlow.value = frameId
     }
 
     // MARK: - Private JSON Helpers

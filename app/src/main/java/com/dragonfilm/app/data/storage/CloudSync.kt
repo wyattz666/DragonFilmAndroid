@@ -25,9 +25,13 @@ class CloudSync(
         if (isSyncing) return@withContext false
         isSyncing = true
         try {
-            // 1. Refresh latest user profile (avatar, username, email)
+            // 1. Refresh latest user profile (avatar, username, email, avatar_frame)
             try {
                 authManager.refreshProfile()
+                val refreshedUser = authManager.currentUser.value
+                if (refreshedUser != null && refreshedUser.avatarFrame.isNotEmpty()) {
+                    localStore.setAvatarFrame(refreshedUser.avatarFrame)
+                }
             } catch (e: Exception) {
                 Log.w("CloudSync", "Profile refresh warning: ${e.message}")
             }
@@ -193,6 +197,12 @@ class CloudSync(
                 localStore.saveActors(map.values.toList().take(200))
             }
         }
+
+        // Merge Avatar Frame
+        val remoteFrame = remote.optString("avatar_frame", "")
+        if (remoteFrame.isNotEmpty()) {
+            localStore.setAvatarFrame(remoteFrame)
+        }
     }
 
     private fun buildLocalSnapshot(): Map<String, Any> {
@@ -205,6 +215,7 @@ class CloudSync(
             "type" to "cloud-data",
             "version" to 4,
             "savedAt" to sdf.format(Date()),
+            "avatar_frame" to localStore.getAvatarFrame(),
             "history" to localStore.getHistory().map { item ->
                 mapOf(
                     "slug" to item.slug,

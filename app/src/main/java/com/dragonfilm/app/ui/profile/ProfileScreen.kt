@@ -353,6 +353,12 @@ fun ProfileScreen(
             onDismiss = { showAvatarFrameDialog = false },
             onSelectFrame = { newFrame ->
                 localStore.setAvatarFrame(newFrame)
+                if (currentUser != null) {
+                    scope.launch {
+                        authManager.updateAvatarFrame(newFrame)
+                        cloudSync?.sync()
+                    }
+                }
             },
             onRequireLogin = {
                 showAvatarFrameDialog = false

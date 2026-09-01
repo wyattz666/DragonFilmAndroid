@@ -12,7 +12,7 @@ data class AvatarFrame(
 
 object AvatarFrameCatalog {
     val NONE = AvatarFrame(
-        id = "none",
+        id = "",
         name = "Mặc định",
         description = "Không dùng khung",
         drawableRes = 0,
@@ -22,64 +22,75 @@ object AvatarFrameCatalog {
     val frames: List<AvatarFrame> = listOf(
         NONE,
         AvatarFrame(
-            id = "frame_dragon_gold",
-            name = "Rồng Vàng Hoàng Kim",
-            description = "Biểu tượng quyền lực tối thượng",
-            drawableRes = R.drawable.frame_dragon_gold
+            id = "frame-dragon-spirit",
+            name = "Hồn Rồng Thiêng",
+            description = "Biểu tượng hoàng kim tối thượng",
+            drawableRes = R.drawable.frame_dragon_spirit
         ),
         AvatarFrame(
-            id = "frame_golden_ring",
-            name = "Vòng Tròn Hoàng Gia",
-            description = "Kim sắc rạng ngời tinh xảo",
-            drawableRes = R.drawable.frame_golden_ring
+            id = "frame-golden-royale",
+            name = "Hoàng Kim Quý Tộc",
+            description = "Vương giả kim sắc rực rỡ",
+            drawableRes = R.drawable.frame_golden_royale
         ),
         AvatarFrame(
-            id = "frame_fire_phoenix",
-            name = "Hỏa Phụng Hoàng",
-            description = "Ngọn lửa quyền năng tái sinh",
-            drawableRes = R.drawable.frame_fire_phoenix
-        ),
-        AvatarFrame(
-            id = "frame_royal_crest",
-            name = "Vương Miện Quý Tộc",
-            description = "Đẳng cấp thành viên danh dự",
-            drawableRes = R.drawable.frame_royal_crest
-        ),
-        AvatarFrame(
-            id = "frame_dreamweaver",
-            name = "Huyễn Mộng Dạ Khúc",
+            id = "frame-dreamweaver",
+            name = "Kẻ Dệt Mộng (Genshin)",
             description = "Sắc màu huyền ảo của giấc mơ",
             drawableRes = R.drawable.frame_dreamweaver
         ),
         AvatarFrame(
-            id = "frame_magic_circle",
-            name = "Ma Pháp Trận",
-            description = "Trận pháp ma thuật huyền bí",
-            drawableRes = R.drawable.frame_magic_circle
+            id = "frame-celestial-night",
+            name = "Dạ Nguyệt Tinh Cầu",
+            description = "Ánh sáng tinh hà huyền bí",
+            drawableRes = R.drawable.frame_celestial_night
         ),
         AvatarFrame(
-            id = "frame_crystal_bloom",
-            name = "Băng Tinh Thiên Giới",
-            description = "Hoa tuyết pha lê thuần khiết",
-            drawableRes = R.drawable.frame_crystal_bloom
+            id = "frame-cyber-neon",
+            name = "Cyber Neon",
+            description = "Phong cách công nghệ tương lai",
+            drawableRes = R.drawable.frame_cyber_neon
         ),
         AvatarFrame(
-            id = "frame_celestial_star",
-            name = "Ngân Hà Tinh Tú",
-            description = "Ánh sáng tinh hà rực rỡ",
-            drawableRes = R.drawable.frame_celestial_star
+            id = "frame-tech-shadow",
+            name = "Chiến Binh Bóng Đêm",
+            description = "Sức mạnh hắc ám uy vũ",
+            drawableRes = R.drawable.frame_tech_shadow
         ),
         AvatarFrame(
-            id = "frame_3d_cute",
-            name = "Thỏ Ngọc 3D",
-            description = "Khung 3D đáng yêu cao cấp",
-            drawableRes = R.drawable.frame_3d_cute
+            id = "frame-crystal-wings",
+            name = "Đôi Cánh Pha Lê",
+            description = "Cánh thần tiên thuần khiết",
+            drawableRes = R.drawable.frame_crystal_wings
+        ),
+        AvatarFrame(
+            id = "frame-cute-ribbon",
+            name = "Mèo Con Đáng Yêu",
+            description = "Khung nơ mèo 3D dễ thương",
+            drawableRes = R.drawable.frame_cute_ribbon
+        ),
+        AvatarFrame(
+            id = "frame-ruby-rose",
+            name = "Hồng Ngọc Hoàng Gia",
+            description = "Hồng ngọc quý phái sang trọng",
+            drawableRes = R.drawable.frame_ruby_rose
         )
     )
 
+    fun normalizeId(rawId: String?): String {
+        val trimmed = (rawId ?: "").trim()
+        if (trimmed.isEmpty() || trimmed.equals("none", ignoreCase = true)) return ""
+        return trimmed.replace("_", "-")
+    }
+
     fun getFrame(id: String?): AvatarFrame {
-        if (id.isNullOrEmpty() || id == "none") return NONE
-        return frames.firstOrNull { it.id == id } ?: NONE
+        val normalized = normalizeId(id)
+        if (normalized.isEmpty()) return NONE
+        val safeRaw = (id ?: "").trim()
+        return frames.firstOrNull {
+            it.id.equals(normalized, ignoreCase = true) ||
+            it.id.replace("-", "_").equals(safeRaw, ignoreCase = true)
+        } ?: NONE
     }
 
     fun getFrameDrawable(id: String?): Int? {

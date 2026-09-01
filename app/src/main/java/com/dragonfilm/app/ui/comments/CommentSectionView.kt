@@ -255,12 +255,13 @@ private fun CommentRowView(
             .padding(DFSpacing.lg),
         verticalAlignment = Alignment.Top
     ) {
-        // User Avatar
+        // User Avatar with VIP Frame
         com.dragonfilm.app.ui.profile.UserAvatarView(
             avatarUrl = comment.user.avatarUrl,
             username = comment.user.username,
-            size = 34.dp,
-            textSize = 13.sp
+            size = 38.dp,
+            textSize = 14.sp,
+            frameId = comment.user.avatarFrame
         )
 
         Spacer(modifier = Modifier.width(10.dp))

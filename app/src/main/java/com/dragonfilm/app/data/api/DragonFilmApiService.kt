@@ -87,6 +87,12 @@ interface DragonFilmApiService {
         @Header("Authorization") token: String
     ): AuthResponse
 
+    @POST("/api/user/profile")
+    suspend fun updateProfile(
+        @Header("Authorization") token: String,
+        @Body body: Map<String, String>
+    ): AuthResponse
+
     @GET("/api/user-data")
     suspend fun getUserData(
         @Header("Authorization") token: String

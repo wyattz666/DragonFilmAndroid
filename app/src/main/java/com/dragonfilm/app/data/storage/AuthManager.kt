@@ -72,4 +72,25 @@ class AuthManager(private val context: Context) {
             false
         }
     }
+
+    suspend fun updateAvatarFrame(frameId: String): Boolean {
+        val currentToken = _token.value ?: return false
+        val user = _currentUser.value ?: return false
+        return try {
+            val updatedUser = user.copy(avatarFrame = frameId)
+            updateProfile(updatedUser)
+            val resp = ApiClient.service.updateProfile(
+                "Bearer $currentToken",
+                mapOf("avatar_frame" to frameId)
+            )
+            if (resp.ok && resp.user != null) {
+                updateProfile(resp.user)
+                true
+            } else {
+                true
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
 }

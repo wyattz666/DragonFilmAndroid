@@ -24,6 +24,9 @@ data class User(
     @SerializedName("is_admin", alternate = ["isAdmin", "admin"])
     val isAdmin: Boolean = false,
 
+    @SerializedName("avatar_frame", alternate = ["avatarFrame", "frame"])
+    val avatarFrame: String = "",
+
     @SerializedName("created_at", alternate = ["createdAt"])
     val createdAt: String = ""
 )
@@ -76,7 +79,10 @@ data class CommentUser(
     val role: String = "user",
 
     @SerializedName("is_admin", alternate = ["isAdmin", "admin"])
-    val isAdmin: Boolean = false
+    val isAdmin: Boolean = false,
+
+    @SerializedName("avatar_frame", alternate = ["avatarFrame", "frame"])
+    val avatarFrame: String? = null
 )
 
 data class HistoryItem(
